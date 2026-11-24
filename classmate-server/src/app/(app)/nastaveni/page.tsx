@@ -11,7 +11,7 @@ import { VersionInfo } from "@/components/VersionInfo";
 import { SummarySetting } from "@/components/SummarySetting";
 import { getPref } from "@/lib/prefs";
 import { summaryEnabled } from "@/lib/summary";
-import { setTimetableSharing } from "@/app/actions/settings";
+import { saveMyGroups, setTimetableSharing } from "@/app/actions/settings";
 import { setCategory } from "@/app/actions/messages";
 import { PushToggle } from "@/components/PushToggle";
 import { CATEGORIES, disabledCategories } from "@/lib/messages";
@@ -30,6 +30,8 @@ import { all } from "@/lib/db";
 import { originOf } from "@/lib/oauth";
 import { fmtDate, fmtTimeSeconds } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
+import { PluginSettings } from "@/components/PluginSettings";
+import pluginStore from "../../../../plugins/store.json";
 import { calendarStatus } from "@/lib/personal-calendar";
 import { removePersonalCalendarAction, savePersonalCalendar } from "@/app/actions/kalendar-osobni";
 import { removeMyAvatar } from "@/app/actions/avatar";
@@ -44,10 +46,8 @@ import { TodoistConnect } from "@/components/TodoistConnect";
 import { AfterSchoolSetting } from "@/components/AfterSchoolSetting";
 import { todoistAccount, todoistOAuthConfigured } from "@/lib/todoist";
 import { fmtDateTime } from "@/lib/dates";
-import { schoolTrainingEnabled, trainingActive } from "@/lib/training";
-import { setTrainingAction } from "@/app/actions/denik";
 import { remainingRecoveryCodes } from "@/lib/twofa";
-import { getTimetable, userGroups, userSubjects } from "@/lib/sync";
+import { chosenGroups, getTimetable, permanentTimetable, userSubjects } from "@/lib/sync";
 
 export const metadata = { title: "Nastavení" };
 export const dynamic = "force-dynamic";
@@ -67,7 +67,8 @@ const GROUPS = [
   { id: "obecne", label: "Vzhled a chování", sub: "Motiv, rozložení, zkratky", color: "#5b8def", icon: "M12 3a9 9 0 1 0 0 18 3 3 0 0 0 2-5 2 2 0 0 1 2-2h2a2 2 0 0 0 2-2 9 9 0 0 0-8-9zM7.5 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm4 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" },
   { id: "oznameni", label: "Oznámení", sub: "Co a jak ti má chodit", color: "#ef5b5b", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zM13.7 21a2 2 0 0 1-3.4 0" },
   { id: "skola", label: "Škola a předměty", sub: "Předměty, skupiny a sdílení rozvrhu", color: "#34b27b", icon: "M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5" },
-  { id: "propojeni", label: "Propojení", sub: "Todoist, tréninkový deník, AI aplikace", color: "#f0a030", icon: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" },
+  { id: "propojeni", label: "Propojení", sub: "Todoist, AI aplikace", color: "#f0a030", icon: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" },
+  { id: "pluginy", label: "Pluginy a widgety", sub: "Vlastní widgety na Dnes, obchod s pluginy", color: "#2bb3a3", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM17 13v7M13.5 16.5h7" },
   { id: "ucet", label: "Účet a zabezpečení", sub: "Heslo, ověření, export dat", color: "#8b6cf0", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
   { id: "aplikace", label: "O aplikaci", sub: "Verze, novinky, podpora", color: "#7b8794", icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01" },
 ];
@@ -84,7 +85,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const socials = parseSocials(get<{ socials: string | null }>("SELECT socials FROM users WHERE id = ?", user.id)?.socials);
   const inApp = isAppRequest((await headers()).get("user-agent")); // stránku zobrazuje mobilní aplikace
   const subjects = userSubjects(user.id);
-  const groups = userGroups(user.id);
   const perm = (await getTimetable(user, "permanent")).data;
   const teachers = new Map<string, string[]>();
   for (const l of perm?.lessons ?? []) {
@@ -95,6 +95,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   }
   const todoist = todoistAccount(user.id);
   const cal = calendarStatus(user.id);
+  const ttGroups = permanentTimetable().groups;
+  const myGroups = chosenGroups(user);
   const season = activeSeason();
   const sp = await searchParams;
   const group = GROUPS.find((g) => g.id === sp.k)?.id ?? "obecne";
@@ -234,16 +236,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
         <section>
           <h2 className="section">Moje skupiny</h2>
-          <p className="hint" style={{ margin: "4px 0 12px" }}>Úkol, test nebo zkoušení u předmětu rozděleného na skupiny se zadá automaticky jen pro tvou skupinu.</p>
-          {groups.length ? (
-            <div className="card rows">
-              {groups.map((g) => (
-                <div key={g.id} className="kv">
-                  <div><strong>{g.label}</strong><small>{g.whole_class ? "celá třída" : g.subjects.split(",").join(", ")}</small></div>
-                                  </div>
-              ))}
-            </div>
-          ) : <div className="empty">Zatím žádné skupiny.</div>}
+          <p className="hint" style={{ margin: "4px 0 12px" }}>Zaškrtni skupiny, do kterých chodíš (třeba angličtina 1). Rozvrh, předměty a zadání u dělených předmětů se ti pak ukazují jen pro ně. Když nezaškrtneš nic, vidíš hodiny všech skupin.</p>
+          {ttGroups.length ? (
+            <ActionForm action={saveMyGroups} resetOnSuccess={false}>
+              <div className="card card-pad">
+                {ttGroups.map((g) => (
+                  <label key={g.id} className="check-row">
+                    <input type="checkbox" name="group" value={g.id} defaultChecked={myGroups?.has(g.id) ?? false} />
+                    <span><b>{g.abbrev}</b>{g.name && g.name !== g.abbrev ? ` · ${g.name}` : ""}</span>
+                  </label>
+                ))}
+              </div>
+              <div style={{ marginTop: 12 }}><Submit>Uložit skupiny</Submit></div>
+            </ActionForm>
+          ) : <div className="empty">Třída se na žádné předměty nedělí.</div>}
         </section>
 
         <section id="kalendar">
@@ -289,23 +295,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
         {!user.demo && group === "propojeni" && (
         <div className="masonry">
-
-        {schoolTrainingEnabled(user.school_id) && (
-          <section id="denik">
-            <h2 className="section" style={{ marginBottom: 12 }}>Tréninkový deník</h2>
-            <div className="card card-pad">
-              <p style={{ margin: "0 0 14px" }}>Tvoje škola povolila deník pro program Aktivní sportovec. Zapisuješ do něj tréninky a týdenní reflexe (ručně, nebo z Intervals.icu) a stáhneš si z něj tabulku, kterou škola vyžaduje.</p>
-              {trainingActive(user) ? (
-                <div className="btn-row">
-                  <Link href="/denik" className="btn primary">Otevřít deník</Link>
-                  <form action={setTrainingAction}><input type="hidden" name="enabled" value="0" /><button className="btn">Vypnout</button></form>
-                </div>
-              ) : (
-                <form action={setTrainingAction}><input type="hidden" name="enabled" value="1" /><button className="btn primary">Zapnout tréninkový deník</button></form>
-              )}
-            </div>
-          </section>
-        )}
 
         <section id="todoist">
           <h2 className="section" style={{ marginBottom: 12 }}>Todoist</h2>
@@ -441,6 +430,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
         </div>
         )}
+
+        {group === "pluginy" && <PluginSettings store={pluginStore.plugins} />}
 
         {group === "aplikace" && (
         <div className="masonry">

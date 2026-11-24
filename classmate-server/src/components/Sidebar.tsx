@@ -1,6 +1,7 @@
 "use client";
 
 import { tapVersion } from "@/lib/version-egg";
+import { loadPlugins, onPluginsChange, pluginPages } from "@/lib/plugins-client";
 import { versionLabel, versionTitle } from "@/lib/version";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,7 +23,6 @@ const items = [
   { href: "/nastenka", label: "Nástěnka", icon: "pin", board: true },
   { href: "/sluzby", label: "Služby", icon: "broom", duty: true },
   { href: "/pokladna", label: "Pokladna", icon: "coin", cash: true },
-  { href: "/denik", label: "Tréninkový deník", icon: "pulse", training: true },
   { href: "/predmety", label: "Předměty", icon: "book" },
   { href: "/poznamky", label: "Poznámky", icon: "pen" },
   { href: "/trofeje", label: "Trofeje", icon: "trophy" },
@@ -33,7 +33,7 @@ const items = [
 /** Menu: nahoře jen to, co se používá denně, zbytek je pod „Další“ (sbalené, pamatuje se v prohlížeči). Při sbalení zůstane vidět jen stránka, na které jsi, a zmizí, až z ní odejdeš. */
 const GROUPS = [
   { id: "main", label: "", hrefs: ["/dnes", "/rozvrh", "/kalendar", "/ukoly", "/testy-a-zkouseni", "/poznamky", "/predmety", "/studium"] },
-  { id: "more", label: "Další", hrefs: ["/nastenka", "/spoluzaci", "/sluzby", "/pokladna", "/denik", "/trofeje"] },
+  { id: "more", label: "Další", hrefs: ["/nastenka", "/spoluzaci", "/sluzby", "/pokladna", "/trofeje"] },
 ];
 const CLOSED_KEY = "nav-closed4";
 
@@ -41,7 +41,7 @@ const CLOSED_KEY = "nav-closed4";
 const MORE_GROUPS = [
   { id: "learn", label: "Učení", icon: "cap", hrefs: ["/poznamky", "/predmety", "/studium", "/kalendar"] },
   { id: "admin", label: "Administrativa", icon: "mail", hrefs: ["/nastenka", "/spoluzaci", "/sluzby", "/pokladna"] },
-  { id: "tools", label: "Nástroje", icon: "settings", hrefs: ["/denik", "/trofeje", "/nastaveni", "/sprava"] },
+  { id: "tools", label: "Nástroje", icon: "settings", hrefs: ["/trofeje", "/nastaveni", "/sprava"] },
 ];
 
 const PRIMARY = new Set(["/dnes", "/rozvrh", "/ukoly", "/testy-a-zkouseni"]);
@@ -61,7 +61,7 @@ function ring(ctx: AudioContext) {
   }
 }
 
-export function Sidebar({ school, className, isAdmin, slots, unread: initialUnread, study = false, cash = false, duty = false, board = false, boardNew = 0, training = false, me }: { me: { name: string; src: string | null }; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number; training?: boolean }) {
+export function Sidebar({ school, className, isAdmin, slots, unread: initialUnread, study = false, cash = false, duty = false, board = false, boardNew = 0, me }: { me: { name: string; src: string | null }; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number }) {
   const path = usePathname();
   const logo = useRef<HTMLButtonElement>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -98,7 +98,15 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
     } catch {}
   };
 
-  const visible = items.filter((i) => (!i.admin || isAdmin) && (!("study" in i) || study) && (!("cash" in i) || cash) && (!("duty" in i) || duty) && (!("board" in i) || board) && (!("training" in i) || training));
+  // stránky pluginů z tohoto prohlížeče (adresy zná jen prohlížeč, server ne)
+  const [pluginLinks, setPluginLinks] = useState<ReturnType<typeof pluginPages>>([]);
+  useEffect(() => {
+    const read = () => setPluginLinks(pluginPages(loadPlugins()));
+    read();
+    return onPluginsChange(read);
+  }, []);
+
+  const visible = items.filter((i) => (!i.admin || isAdmin) && (!("study" in i) || study) && (!("cash" in i) || cash) && (!("duty" in i) || duty) && (!("board" in i) || board));
 
   const link = (i: (typeof items)[number]) => (
     <Link key={i.href} href={i.href} title={i.label} aria-current={path.startsWith(i.href) ? "page" : undefined} className={PRIMARY.has(i.href) ? undefined : "nav-more"}>
@@ -151,6 +159,19 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
               </div>
             );
           })}
+          {pluginLinks.length > 0 && (
+            <div className="nav-group">
+              <span className="nav-sep" aria-hidden />
+              <div className="nav-items">
+                {pluginLinks.map((p) => (
+                  <Link key={p.href} href={p.href} title={p.title} className="nav-more" aria-current={path.startsWith("/plugin") && typeof window !== "undefined" && window.location.search.includes(`s=${encodeURIComponent(p.id)}`) ? "page" : undefined}>
+                    <Icon name={p.icon} />
+                    <span className="nav-label">{p.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           {/* jen na telefonu: ostatní stránky v rozbalovacím panelu */}
           <button className="nav-more-btn" aria-expanded={more} aria-current={visible.some((i) => !PRIMARY.has(i.href) && path.startsWith(i.href)) ? "page" : undefined} onClick={() => { setMore((m) => !m); setMoreView(null); }}>
             <Icon name="dots" />

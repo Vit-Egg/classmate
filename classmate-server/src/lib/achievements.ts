@@ -141,8 +141,8 @@ export function collectStats(user: User): Stats {
     cashPaid: count("SELECT COUNT(*) n FROM cash_payments WHERE user_id = ? AND status = 'paid' AND exempt = 0", id),
     cashFast: count("SELECT COUNT(*) n FROM cash_payments p JOIN cash_requests r ON r.id = p.request_id WHERE p.user_id = ? AND p.status = 'paid' AND p.exempt = 0 AND p.paid_at IS NOT NULL AND p.paid_at - r.created_at <= 86400000", id),
     duty: count("SELECT COUNT(*) n FROM duty_weeks WHERE user_id = ? AND week_start <= ?", id, today),
-    trainings: count("SELECT COUNT(*) n FROM training_entries WHERE user_id = ?", id),
-    trainMinutes: count("SELECT SUM(minutes) n FROM training_entries WHERE user_id = ?", id),
+    trainings: 0, // tréninky a jejich trofeje jsou v pluginu Tréninkový deník
+    trainMinutes: 0,
     events: count("SELECT COUNT(*) n FROM custom_events WHERE user_id = ?", id),
     unlocked: 0,
   };

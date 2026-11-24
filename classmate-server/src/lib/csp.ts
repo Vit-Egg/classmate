@@ -8,7 +8,10 @@ export function buildCsp(analytics?: string) {
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "media-src 'self' blob:",
-    `connect-src 'self' data: blob:${a}`,
+    // https: kvůli manifestům pluginů, které stahuje prohlížeč (osobní widgety, viz plugins-client.ts)
+    `connect-src 'self' data: blob: https:${a}`,
+    // osobní vložené stránky a stránky pluginů (iframe se sandboxem); jen https
+    "frame-src https:",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",

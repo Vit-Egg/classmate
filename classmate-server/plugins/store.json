@@ -1,0 +1,14 @@
+{
+  "$comment": "Obchod s pluginy Classmate. Seznam schvaluje jen vlastník repozitáře. Patří sem jen pluginy, které nepracují s cizími systémy bez dovolení.",
+  "plugins": [
+    {
+      "id": "treninkovy-denik",
+      "name": "Tréninkový deník",
+      "description": "Deník tréninků pro sportovní program školy: aktivity, týdenní reflexe, souhrny, export školní tabulky, trofeje za tréninky a propojení s Intervals.icu nebo Garminem. Do Classmate přidá widgety (tento týden, poslední aktivita, reflexe, trofeje) a stránku Trénink v menu.",
+      "icon": "pulse",
+      "source": "https://github.com/Vit-Egg/treninkovy-denik",
+      "service": "https://treninky.vitegg.com",
+      "connectPath": "/classmate/connect"
+    }
+  ]
+}

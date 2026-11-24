@@ -61,14 +61,9 @@ export default function Privacy() {
             <td>Oprávněný zájem správce (čl. 6 odst. 1 písm. f)</td>
           </tr>
           <tr>
-            <td><b>Volitelné funkce</b>, které si sám zapneš: třídní pokladna, rozpis služeb, sdílení poznámek, odběr kalendáře, oznámení, Todoist, Intervals.icu, osobní kalendář (ICS), funkce s umělou inteligencí</td>
+            <td><b>Volitelné funkce</b>, které si sám zapneš: třídní pokladna, rozpis služeb, sdílení poznámek, odběr kalendáře, oznámení, Todoist, osobní kalendář (ICS), funkce s umělou inteligencí</td>
             <td>Aby funkce fungovala</td>
             <td>Souhlas (čl. 6 odst. 1 písm. a), odvoláš ho vypnutím funkce nebo odpojením služby</td>
-          </tr>
-          <tr>
-            <td><b>Tréninkový deník</b> (jen když si ho zapneš): aktivity, sporty, délka a vzdálenost, poznámky, reflexe, případně tep, výkon a poloha z hodinek nebo Intervals.icu</td>
-            <td>Vedení deníku pro sportovní program školy</td>
-            <td>Výslovný souhlas (čl. 6 odst. 1 písm. a a čl. 9 odst. 2 písm. a): údaje o tepu a výkonu mohou vypovídat o zdraví, proto se zpracovávají jen se zapnutím deníku a můžeš je kdykoliv smazat</td>
           </tr>
           <tr>
             <td><b>Třídní pokladna</b>: kdo má co zaplatit, kdy a jak zaplatil</td>
@@ -88,8 +83,9 @@ export default function Privacy() {
         <li><b>Služba Web Push tvého prohlížeče</b> (Google, Mozilla, Apple nebo Microsoft): doručení oznámení v prohlížeči.</li>
         <li><b>Google (Gemini API)</b>: jen když použiješ funkci s umělou inteligencí; odešle se text, ze kterého má vzniknout odpověď (například poznámka). Do těchto funkcí nevkládej nic citlivého.</li>
         <li><b>Stripe Payments Europe</b>: platba kartou do třídní pokladny, pokud ji třída používá. Stripe je pro platbu samostatným správcem; Classmate číslo karty nikdy nevidí ani neukládá.</li>
-        <li><b>Todoist</b> a <b>Intervals.icu</b>: jen když propojíš svůj účet; posílají se úkoly, resp. se stahují tréninky.</li>
+        <li><b>Todoist</b>: jen když propojíš svůj účet; posílají se do něj úkoly.</li>
         <li><b>Tvůj osobní kalendář (ICS)</b>: jen když v Nastavení vložíš jeho adresu; server ho pravidelně stahuje, aby ti ukázal změny rozvrhu. Adresa se ukládá šifrovaně a nikdo jiný ji nevidí.</li>
+        <li><b>Služby vlastních widgetů a pluginů</b> (například Tréninkový deník): jen když si je sám přidáš. Jejich stránky načítá přímo tvůj prohlížeč, takže služba vidí běžné údaje o připojení (IP adresa, prohlížeč). Adresy widgetů a pluginů se ukládají jen ve tvém prohlížeči, server Classmate je nezná a data z nich nevidí. Za data v takové službě odpovídá její provozovatel podle svých zásad.</li>
         <li><b>nameday.abalin.net</b>: pro zobrazení svátků se posílá jen dnešní datum, žádné osobní údaje.</li>
         <li><b>Spolužáci</b>: viz bod 4.</li>
       </ul>
@@ -101,8 +97,8 @@ export default function Privacy() {
       <h2 id="kdo-vidi">4. Kdo co vidí</h2>
       <ul>
         <li><b>Spolužáci ve třídě</b> vidí tvé jméno, profilovou fotku a kontakty, které vyplníš, úkoly, testy, události a příspěvky, které zadáš pro třídu (nebo skupinu), a poznámky, které sdílíš. Sdílení poznámek můžeš kdykoliv vypnout.</li>
-        <li><b>Jen ty</b> vidíš své nesdílené poznámky, nahrávky, tréninkový deník, nastavení a změny rozvrhu ze svého osobního kalendáře.</li>
-        <li><b>Správci třídy</b> vidí seznam členů, stav pozvánek a technický stav serveru a v pokladně vidí, kdo co zaplatil. Obsah tvých nesdílených poznámek ani deníku v aplikaci nevidí.</li>
+        <li><b>Jen ty</b> vidíš své nesdílené poznámky, nahrávky, nastavení, změny rozvrhu ze svého osobního kalendáře a vlastní widgety a pluginy.</li>
+        <li><b>Správci třídy</b> vidí seznam členů, stav pozvánek a technický stav serveru a v pokladně vidí, kdo co zaplatil. Obsah tvých nesdílených poznámek v aplikaci nevidí.</li>
         <li><b>Provozovatel serveru</b> (správce osobních údajů) má z podstaty věci technický přístup k databázi. Využije ho jen k provozu, zálohám a řešení problémů.</li>
       </ul>
 
@@ -138,7 +134,7 @@ export default function Privacy() {
       <h2 id="smazani-uctu">8. Smazání účtu a stažení dat</h2>
       <p>
         Účet smažeš sám: <b>Nastavení → Účet a zabezpečení → Moje data → Smazat účet</b> (potvrzuje se heslem). Tamtéž si stáhneš všechna svá data.
-        Smazání odstraní účet, přihlášení, zařízení, propojené služby, nahrávky, obrázky, přílohy, deník a nesdílené poznámky. Úkoly a testy, které jsi
+        Smazání odstraní účet, přihlášení, zařízení, propojené služby, nahrávky, obrázky, přílohy a nesdílené poznámky. Úkoly a testy, které jsi
         zadal(a) pro třídu, zůstanou spolužákům bez uvedení autora. Když se do účtu nedostaneš, napiš správci{mail ? <> na {mail}</> : ""}.
       </p>
 

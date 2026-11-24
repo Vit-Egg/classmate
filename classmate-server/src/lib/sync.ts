@@ -8,6 +8,7 @@ import { addDays, mondayOf, pragueNow } from "./dates";
 import type { CacheResult, Hue, Timetable } from "./types";
 import type { User } from "./session";
 import { withPersonalChanges } from "./personal-calendar";
+import { getPref } from "./prefs";
 
 const HUES: Hue[] = ["gray", "purple", "green", "amber", "blue"];
 const hueFor = (name: string) => HUES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
@@ -33,10 +34,25 @@ export function permanentTimetable(): Timetable {
 export function savePermanentTimetable(tt: Timetable) {
   tx(() => {
     run("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value", KEY, JSON.stringify(tt));
-    for (const u of all<{ id: number; class_id: number; class_name: string }>("SELECT u.id, u.class_id, c.name class_name FROM users u JOIN classes c ON c.id = u.class_id")) {
+    for (const u of all<{ id: number; class_id: number; class_name: string; ui_prefs: string | null }>("SELECT u.id, u.class_id, c.name class_name, u.ui_prefs FROM users u JOIN classes c ON c.id = u.class_id")) {
       mapSubjects(u, tt);
     }
   });
+}
+
+/* ---------- skupiny uživatele ---------- */
+
+/** Skupiny, které si uživatel vybral v Nastavení; null = zatím nevybral, pak vidí hodiny všech skupin. */
+export function chosenGroups(user: Pick<User, "ui_prefs">): Set<string> | null {
+  const v = getPref(user, "my_groups");
+  return v ? new Set(v.split(",").filter(Boolean)) : null;
+}
+
+/** Rozvrh jen s hodinami celé třídy a skupin, do kterých uživatel patří. */
+export function forUser(user: Pick<User, "ui_prefs">, tt: Timetable): Timetable {
+  const mine = chosenGroups(user);
+  if (!mine) return tt;
+  return { ...tt, lessons: tt.lessons.filter((l) => !l.groups.length || l.groups.some((g) => mine.has(g))) };
 }
 
 /* ---------- rozvrh ---------- */
@@ -74,10 +90,10 @@ export function permanentWeek(monday: string): Timetable {
 const result = (data: Timetable): CacheResult<Timetable> => ({ data, stale: false, fetchedAt: Date.now() });
 
 /** Týden se změnami z osobního kalendáře uživatele (viz personal-calendar.ts); ty vidí jen on. */
-const personalWeek = (user: User, monday: string) => withPersonalChanges(user.id, permanentWeek(monday));
+const personalWeek = (user: User, monday: string) => withPersonalChanges(user.id, forUser(user, permanentWeek(monday)));
 
 export async function getTimetable(user: User, kind: TimetableKind, _force = false) {
-  return kind === "permanent" ? result(permanentTimetable()) : result(personalWeek(user, weekMonday(kind)));
+  return kind === "permanent" ? result(forUser(user, permanentTimetable())) : result(personalWeek(user, weekMonday(kind)));
 }
 
 /** Rozvrh týdne začínajícího daným pondělím (pro kalendář i „tento/příští týden“). */
@@ -87,11 +103,12 @@ export async function getTimetableWeek(user: User, monday: string, _force = fals
 
 /** Okamžitě, bez čekání – pro prvky, které nesmí zdržovat vykreslení stránky. */
 export function peekTimetable(user: User, kind: TimetableKind): Timetable | null {
-  return kind === "permanent" ? permanentTimetable() : personalWeek(user, weekMonday(kind));
+  return kind === "permanent" ? forUser(user, permanentTimetable()) : personalWeek(user, weekMonday(kind));
 }
 
 /** Předměty a skupiny uživatele podle stálého rozvrhu. */
-export function mapSubjects(user: Pick<User, "id" | "class_id" | "class_name">, tt: Timetable = permanentTimetable()) {
+export function mapSubjects(user: Pick<User, "id" | "class_id" | "class_name" | "ui_prefs">, full: Timetable = permanentTimetable()) {
+  const tt = forUser(user, full);
   const classNameNorm = user.class_name.trim().toLowerCase();
   const sorted = [...tt.lessons].filter((l) => l.subjectId).sort((a, b) => a.day - b.day || a.hour - b.hour);
   tx(() => {

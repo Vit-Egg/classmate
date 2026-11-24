@@ -326,7 +326,7 @@ const FLAVOR: Record<string, string> = {
   meta50: "Padesát trofejí. To chce vitrínu.",
 };
 /** Trofeje, které stály na Bakalářích (známky, absence, propojení) nebo na Strava.cz, se po přestavbě nenabízejí. */
-const REMOVED = new Set(["strava", "bakalari", "stats"]);
+const REMOVED = new Set(["strava", "bakalari", "stats", "train1", "train25", "train100", "train_min1000", "train_min10000"]);
 export const ACHIEVEMENTS: Achievement[] = _ACH.filter((a) => a.cat !== "marks" && a.cat !== "attendance" && !REMOVED.has(a.id)).map((a) => (FLAVOR[a.id] ? { ...a, flavor: FLAVOR[a.id] } : a));
 
 export const byId = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));

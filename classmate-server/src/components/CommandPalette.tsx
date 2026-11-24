@@ -16,7 +16,7 @@ type Remote = { subjects?: { id: number; name: string }[]; notes: { id: number; 
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function CommandPalette({ isAdmin, keys, study = false, duty = false, board = false, cash = false, training = false }: { isAdmin: boolean; keys: KeyMap; study?: boolean; duty?: boolean; board?: boolean; cash?: boolean; training?: boolean }) {
+export function CommandPalette({ isAdmin, keys, study = false, duty = false, board = false, cash = false }: { isAdmin: boolean; keys: KeyMap; study?: boolean; duty?: boolean; board?: boolean; cash?: boolean }) {
   const router = useRouter();
   const dlg = useRef<HTMLDialogElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -64,7 +64,6 @@ export function CommandPalette({ isAdmin, keys, study = false, duty = false, boa
       ["/nastenka", "Nástěnka třídy", "pin", "nástěnka oznámení anketa příspěvky akce", board],
       ["/sluzby", "Služby", "broom", "třídní služba kdo má službu", duty],
       ["/pokladna", "Pokladna", "coin", "platby peníze třídní fond", cash],
-      ["/denik", "Tréninkový deník", "pulse", "sport trénink aktivní sportovec tělocvik tev intervals reflexe", training],
     ];
     nav.push(...more.filter((m) => m[4]).map(([href, title, icon, keywords]): Cmd => ({ id: `nav-${href}`, title, group: "Přejít na", icon, keywords, run: go(href) })));
     const actions: Cmd[] = [
@@ -82,7 +81,7 @@ export function CommandPalette({ isAdmin, keys, study = false, duty = false, boa
       { id: "notes-trash", title: "Koš poznámek", group: "Akce", icon: "trash", keywords: "smazané obnovit", run: go("/poznamky?k=kos") },
       { id: "cal-sub", title: "Odebírat kalendář v telefonu", group: "Akce", icon: "caldays", keywords: "webcal google apple outlook odběr feed", run: go("/kalendar") },
       { id: "set-notify", title: "Nastavení oznámení a e-mailů", group: "Nastavení", icon: "bell", keywords: "push upozornění zprávy e-mail souhrn", run: go("/nastaveni?k=oznameni") },
-      { id: "set-links", title: "Propojení: Todoist, Intervals.icu", group: "Nastavení", icon: "link", keywords: "propojit odpojit todoist", run: go("/nastaveni?k=propojeni") },
+      { id: "set-links", title: "Propojení: Todoist a AI aplikace", group: "Nastavení", icon: "link", keywords: "propojit odpojit todoist", run: go("/nastaveni?k=propojeni") },
       { id: "set-todoist", title: "Todoist", group: "Nastavení", icon: "check", keywords: "propojit úkoly synchronizace oauth token", run: go("/nastaveni?k=propojeni#todoist") },
       { id: "set-school", title: "Škola a předměty", group: "Nastavení", icon: "book", keywords: "shrnutí umělá inteligence", run: go("/nastaveni?k=skola") },
       { id: "set-keys", title: "Vlastní klávesové zkratky", group: "Nastavení", icon: "keyboard", keywords: "klávesy zkratky změnit", run: go("/nastaveni?k=obecne#zkratky") },

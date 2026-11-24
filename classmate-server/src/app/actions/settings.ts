@@ -197,3 +197,17 @@ export async function saveSocials(_: ActionState, fd: FormData): Promise<ActionS
   revalidatePath("/spoluzaci", "layout");
   return { ok: true };
 }
+
+/** Nastavení → Škola a předměty: skupiny z rozvrhu, do kterých uživatel patří (podle nich se mu ukazuje rozvrh, předměty a zadání). */
+export async function saveMyGroups(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const { permanentTimetable, mapSubjects } = await import("@/lib/sync");
+  const known = new Set(permanentTimetable().groups.map((g) => g.id));
+  const picked = fd.getAll("group").map(String).filter((g) => known.has(g));
+  setPref(user, "my_groups", picked.join(","));
+  const { USER_SELECT } = await import("@/lib/session");
+  const fresh = get<import("@/lib/session").User>(`${USER_SELECT} WHERE u.id = ?`, user.id)!;
+  mapSubjects(fresh);
+  revalidatePath("/", "layout");
+  return { ok: true, message: picked.length ? "Skupiny jsou uložené." : "Bez vybraných skupin vidíš hodiny všech skupin." };
+}

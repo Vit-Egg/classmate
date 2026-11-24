@@ -17,6 +17,8 @@ export const PREFS = {
   after_tomorrow: /^[01]$/,
   tt_share: /^[01]$/,
   abs_limit: /^([1-9]\d|)$/,
+  /** skupiny z rozvrhu, do kterých uživatel patří (kódy oddělené čárkou); prázdné = nevybráno, ukazují se všechny */
+  my_groups: /^[A-Za-z0-9_,-]{0,600}$/,
 } as const;
 export type PrefKey = keyof typeof PREFS;
 

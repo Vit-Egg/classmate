@@ -29,6 +29,7 @@ import { celebrates, nameDayNames } from "@/lib/namedays";
 import { classmates } from "@/lib/classmates";
 import { lessonItemsBetween, itemsForLesson } from "@/lib/lessonitems-data";
 import { LessonTags } from "@/components/LessonTags";
+import { PersonalWidgets } from "@/components/PersonalWidgets";
 
 export const metadata = { title: "Dnes" };
 export const dynamic = "force-dynamic";
@@ -408,6 +409,7 @@ export default async function TodayPage() {
           {col("r")}
         </div>}
       </div>
+      <PersonalWidgets />
     </div>
   );
 }

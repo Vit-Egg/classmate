@@ -42,7 +42,8 @@ Provoz v Dockeru a další nastavení najdeš v [`classmate-server/README.md`](c
 - **Poznámky:** společné úpravy v reálném čase, historie verzí, sdílení
 - **Studium:** sady k učení a souhrny s pomocí AI (volitelně, Google Gemini)
 - **Nástěnka, pokladna (i platba kartou přes Stripe), třídní služby, trofeje**
-- **Propojení:** Todoist, Intervals.icu, MCP server pro AI asistenty (Claude, ChatGPT…)
+- **Propojení:** Todoist, MCP server pro AI asistenty (Claude, ChatGPT…)
+- **Vlastní widgety a pluginy:** na stránku Dnes si každý připne stránky z jiných služeb nebo pluginy z obchodu (první je Tréninkový deník)
 - Dvoufázové ověření, audit log, export a smazání vlastních dat
 
 ## Přispívání

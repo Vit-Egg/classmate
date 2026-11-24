@@ -33,3 +33,4 @@ Typy zkontroluješ příkazem `npm run typecheck` a produkční sestavení vyrob
 - **MCP a API:** aplikace je zároveň MCP server (`/mcp`, OAuth 2.1 + PKCE) a má REST API v1. AI asistent smí dělat jen to, co uživatel v aplikaci (`src/lib/mcp/`, `src/lib/services.ts`).
 - **Oznámení:** Web Push (klíče VAPID se vygenerují do `data/.vapid.json`) a push do Android aplikace přes Firebase (`/data/.fcm.json`, volitelné).
 - **PWA:** aplikaci jde nainstalovat na plochu a funguje offline (`public/sw.js`).
+- **Pluginy a vlastní widgety:** osobní vložené stránky, pluginy s manifestem a obchod s pluginy. Ukládají se jen v prohlížeči. Formát popisuje [PLUGINY.md](PLUGINY.md).

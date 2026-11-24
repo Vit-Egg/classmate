@@ -4,6 +4,8 @@ Android aplikace pro [Classmate](../README.md). Je to **tenký nativní obal kol
 
 Aplikace patří jedné třídě: **adresa serveru je pevná** (`classmate.baseUrl`) a uživatel ji nevybírá. Distribuuje se jako APK ke stažení, ne přes Google Play.
 
+> **Pozor: zdrojové kódy nejsou kompletní.** Veřejný archiv, ze kterého tenhle repozitář vznikl, vynechal všechny složky jménem `data/`, a tím i balíček `android/app/src/main/java/cz/classmate/app/data` (třídy `Store`, `Snapshot` a další). Dokud se nedoplní z původního repozitáře, aplikace nejde sestavit a kontrola na GitHubu se spouští jen ručně.
+
 ## Co nativní část umí
 
 | Co | Jak |

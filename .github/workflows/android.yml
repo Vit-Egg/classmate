@@ -1,12 +1,10 @@
 # Kontrola Android aplikace: sestaví ladicí APK a spustí lint. APK je ke stažení v artefaktech běhu.
+# Zatím jen ručně: ve zdrojích chybí balíček cz.classmate.app.data (Store, Snapshot), který veřejný archiv vynechal.
+# Až bude doplněný, vrať sem spouštění při push a pull_request.
 name: Android
 
 on:
-  push:
-    branches: [main]
-    paths: ["classmate-app/**", ".github/workflows/android.yml"]
-  pull_request:
-    paths: ["classmate-app/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
 
 jobs:
   build:

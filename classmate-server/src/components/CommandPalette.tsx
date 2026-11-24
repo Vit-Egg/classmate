@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { createNote } from "@/app/actions/notes";
-import { syncNow } from "@/app/actions/settings";
 import { ACCENTS, applyAccent, applyTheme } from "@/lib/theme";
 import { downloadMyData } from "@/lib/download";
 import { promptInstall } from "@/lib/pwa";
@@ -17,7 +16,7 @@ type Remote = { subjects?: { id: number; name: string }[]; notes: { id: number; 
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function CommandPalette({ isAdmin, keys, lunch = false, study = false, duty = false, board = false, cash = false, training = false }: { isAdmin: boolean; keys: KeyMap; lunch?: boolean; study?: boolean; duty?: boolean; board?: boolean; cash?: boolean; training?: boolean }) {
+export function CommandPalette({ isAdmin, keys, study = false, duty = false, board = false, cash = false, training = false }: { isAdmin: boolean; keys: KeyMap; study?: boolean; duty?: boolean; board?: boolean; cash?: boolean; training?: boolean }) {
   const router = useRouter();
   const dlg = useRef<HTMLDialogElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -57,16 +56,14 @@ export function CommandPalette({ isAdmin, keys, lunch = false, study = false, du
   const commands = useMemo<Cmd[]>(() => {
     const nav: Cmd[] = SHORTCUTS.filter((x) => x.href && (!x.admin || isAdmin))
       .map(({ id: sid, href, label }) => [keys[sid], href!, label] as const)
-      .map(([k, href, label]) => ({ id: `nav-${href}`, title: label, group: "Přejít na", icon: ({ "/dnes": "sun", "/rozvrh": "calendar", "/kalendar": "caldays", "/ukoly": "check", "/testy-a-zkouseni": "exam", "/predmety": "book", "/poznamky": "pen", "/znamky": "star", "/trofeje": "trophy", "/absence": "absence", "/sprava": "shield", "/nastaveni": "settings" } as Record<string, string>)[href], hint: k, run: go(href) }));
+      .map(([k, href, label]) => ({ id: `nav-${href}`, title: label, group: "Přejít na", icon: ({ "/dnes": "sun", "/rozvrh": "calendar", "/kalendar": "caldays", "/ukoly": "check", "/testy-a-zkouseni": "exam", "/predmety": "book", "/poznamky": "pen", "/trofeje": "trophy", "/sprava": "shield", "/nastaveni": "settings" } as Record<string, string>)[href], hint: k, run: go(href) }));
     // stránky bez klávesové zkratky; moduly, které si uživatel nebo třída nezapnuly, se nenabízejí (stejně jako v menu)
     const more: [string, string, string, string, boolean, string?][] = [
-      ["/komunikace", "Komunikace", "mail", "komens nástěnka školní e-mail teams zprávy pošta", true],
       ["/spoluzaci", "Spolužáci", "users", "třída seznam lidí", true],
       ["/studium", "Studium", "cap", "učení kartičky procvičování souhrn", study],
       ["/nastenka", "Nástěnka třídy", "pin", "nástěnka oznámení anketa příspěvky akce", board],
       ["/sluzby", "Služby", "broom", "třídní služba kdo má službu", duty],
       ["/pokladna", "Pokladna", "coin", "platby peníze třídní fond", cash],
-      ["/obedy", "Obědy", "utensils", "jídelna strava jídelníček objednat oběd", lunch],
       ["/denik", "Tréninkový deník", "pulse", "sport trénink aktivní sportovec tělocvik tev intervals reflexe", training],
     ];
     nav.push(...more.filter((m) => m[4]).map(([href, title, icon, keywords]): Cmd => ({ id: `nav-${href}`, title, group: "Přejít na", icon, keywords, run: go(href) })));
@@ -75,7 +72,6 @@ export function CommandPalette({ isAdmin, keys, lunch = false, study = false, du
       { id: "new-note", title: "Nová poznámka", group: "Akce", icon: "plus", keywords: "napsat zápis", run: () => createNote(new FormData()) },
       { id: "new-task", title: "Nový úkol", group: "Akce", icon: "plus", keywords: "domácí úkol zadání", run: go("/ukoly?new=1") },
       { id: "new-test", title: "Nový test nebo zkoušení", group: "Akce", icon: "plus", keywords: "písemka zkoušení test", run: go("/testy-a-zkouseni?new=1") },
-      { id: "sync", title: "Synchronizovat rozvrh a známky", group: "Akce", icon: "refresh", keywords: "bakalari aktualizovat načíst", run: async () => { await syncNow(); router.refresh(); } },
       { id: "tt-next", title: "Rozvrh na příští týden", group: "Akce", icon: "calendar", run: go("/rozvrh?t=pristi") },
       { id: "tt-perm", title: "Stálý rozvrh", group: "Akce", icon: "calendar", run: go("/rozvrh?t=staly") },
       { id: "tt-vert", title: "Rozvrh vertikálně", group: "Akce", icon: "calendar", run: () => { document.cookie = "tt_view=v; path=/; max-age=31536000; samesite=lax"; void savePref("tt_view", "v"); router.push("/rozvrh?o=v"); } },
@@ -86,7 +82,7 @@ export function CommandPalette({ isAdmin, keys, lunch = false, study = false, du
       { id: "notes-trash", title: "Koš poznámek", group: "Akce", icon: "trash", keywords: "smazané obnovit", run: go("/poznamky?k=kos") },
       { id: "cal-sub", title: "Odebírat kalendář v telefonu", group: "Akce", icon: "caldays", keywords: "webcal google apple outlook odběr feed", run: go("/kalendar") },
       { id: "set-notify", title: "Nastavení oznámení a e-mailů", group: "Nastavení", icon: "bell", keywords: "push upozornění zprávy e-mail souhrn", run: go("/nastaveni?k=oznameni") },
-      { id: "set-links", title: "Propojení: Bakaláři, školní e-mail, Todoist, Strava", group: "Nastavení", icon: "link", keywords: "bakalari propojit odpojit", run: go("/nastaveni?k=propojeni") },
+      { id: "set-links", title: "Propojení: Todoist, Intervals.icu", group: "Nastavení", icon: "link", keywords: "propojit odpojit todoist", run: go("/nastaveni?k=propojeni") },
       { id: "set-todoist", title: "Todoist", group: "Nastavení", icon: "check", keywords: "propojit úkoly synchronizace oauth token", run: go("/nastaveni?k=propojeni#todoist") },
       { id: "set-school", title: "Škola a předměty", group: "Nastavení", icon: "book", keywords: "shrnutí umělá inteligence", run: go("/nastaveni?k=skola") },
       { id: "set-keys", title: "Vlastní klávesové zkratky", group: "Nastavení", icon: "keyboard", keywords: "klávesy zkratky změnit", run: go("/nastaveni?k=obecne#zkratky") },

@@ -12,7 +12,7 @@ export async function setupAction(_: ActionState, fd: FormData): Promise<ActionS
   let id: number;
   try {
     id = createServer(
-      { name: fd.get("name"), email: fd.get("email"), password: fd.get("password"), school: fd.get("school"), bakalari: fd.get("bakalari") ?? "", class: fd.get("class") },
+      { name: fd.get("name"), email: fd.get("email"), password: fd.get("password"), school: fd.get("school"), class: fd.get("class") },
       String(fd.get("token") ?? ""),
     );
   } catch (e) {

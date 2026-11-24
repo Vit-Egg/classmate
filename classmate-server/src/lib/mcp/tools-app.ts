@@ -1,5 +1,5 @@
 /**
- * Nástroje navíc pro aplikaci (a AI klienty): Nástěnka třídy, Trofeje, žebříček a odesílání v Komens.
+ * Nástroje navíc pro aplikaci (a AI klienty): Nástěnka třídy, Trofeje a žebříček.
  * Stejně jako ostatní volají logiku webu, takže platí stejná práva, limity a pravidla.
  */
 import { z } from "zod";
@@ -7,7 +7,6 @@ import * as board from "../board";
 import { evaluate, earnedPoints, levelOf, MAX_POINTS } from "../achievements";
 import { CATEGORIES, TIER_NAME, points } from "../achievements-defs";
 import { leaderboard, setBoardOn } from "../leaderboard";
-import { komensSend, komensTypes } from "../komens";
 import { rateLimit } from "../db";
 import { demoBlocked } from "../demo-guard";
 import { ServiceError } from "../services";
@@ -169,34 +168,6 @@ export const appTools: Tool[] = [
       if (user.demo) throw new ServiceError("V demu to nejde.");
       setBoardOn(user.id, a.visible);
       return { visible: a.visible };
-    },
-  },
-  {
-    name: "get_komens_types",
-    title: "Komens: možnosti odeslání",
-    description: "Typy zpráv, skupiny a příjemci, kterým uživatel může v Komens psát (kódy se použijí v send_komens).",
-    schema: z.object({}),
-    annotations: { ...read, openWorldHint: true },
-    async run(user) {
-      return { types: await komensTypes(user) };
-    },
-  },
-  {
-    name: "send_komens",
-    title: "Komens: odeslat zprávu",
-    description: "Odešle zprávu přes Komens (jménem uživatele, vidí ji příjemci ve škole). Kódy typu, skupiny a příjemců jsou z get_komens_types. Odesílej jen na výslovné přání uživatele.",
-    schema: z.object({ type: z.string().min(1).max(40), group: z.string().max(80).default(""), recipients: z.array(z.string().max(80)).max(200).default([]), title: z.string().max(200).default(""), text: z.string().min(1).max(20_000), confirm: z.boolean().default(false), email: z.boolean().default(false), previous_id: z.string().max(80).optional() }),
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-    async run(user, a: any) {
-      const blocked = demoBlocked(user);
-      if (blocked) throw new ServiceError(blocked.error ?? "V demu to nejde.");
-      if (!rateLimit(`komenssend:${user.id}`, 20, 3600)) throw new ServiceError("Poslal jsi hodně zpráv, zkus to za chvíli.");
-      try {
-        await komensSend(user, { type: a.type, group: a.group, recipients: a.recipients, title: a.title, text: a.text, confirm: a.confirm, email: a.email, previousId: a.previous_id });
-      } catch (e) {
-        throw new ServiceError(e instanceof Error ? e.message : "Zprávu se nepodařilo odeslat.");
-      }
-      return { sent: true };
     },
   },
 ];

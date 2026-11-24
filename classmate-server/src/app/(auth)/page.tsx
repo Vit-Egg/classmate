@@ -5,10 +5,11 @@ import { ActionForm, Submit } from "@/components/forms";
 import { mailConfigured } from "@/lib/mail";
 import { getCurrentUser } from "@/lib/session";
 import { needsSetup } from "@/lib/setup";
-import { demoPublicEnabled } from "@/lib/demo-visitor";
 
 export const metadata = { title: "Přihlášení" };
+export const dynamic = "force-dynamic";
 
+/** Hlavní stránka je přihlášení: Classmate je soukromá aplikace jedné třídy, nic veřejného tu není. */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; reset?: string }> }) {
   const sp = await searchParams;
   const next = sp.next;
@@ -33,14 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <Submit className="btn primary big">Přihlásit se</Submit>
       </ActionForm>
       {mailConfigured() && <p className="alt" style={{ marginTop: 14 }}><Link href="/zapomenute-heslo">Zapomněl(a) jsi heslo?</Link></p>}
-      <p className="alt">
-        Nemáš účet? <Link href={safe ? `/registrace?next=${encodeURIComponent(safe)}` : "/registrace"}>Vytvořit účet</Link>
-      </p>
-      {demoPublicEnabled() && (
-        <p className="alt demo-try">
-          Jen se chceš podívat? <Link href="/demo"><b>Vyzkoušet demo bez registrace</b></Link>
-        </p>
-      )}
+      <p className="alt">Nemáš účet? Pozvánku ti pošle správce třídy.</p>
     </>
   );
 }

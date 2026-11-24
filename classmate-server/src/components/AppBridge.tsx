@@ -48,7 +48,7 @@ export function AppBridge({ signedIn }: { signedIn: boolean }) {
     if (!native || !info) return;
     if (!signedIn) {
       // přihlašovací stránka = nikdo není přihlášen: zapomenout spárování
-      if (info.linked && path.startsWith("/prihlaseni")) native.unlink();
+      if (info.linked && (path === "/" || path.startsWith("/prihlaseni"))) native.unlink();
       return;
     }
     if (info.linked || linking) return;

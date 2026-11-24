@@ -9,7 +9,6 @@ import { emptyTasks } from "@/lib/voice";
 import { EditItemDialog } from "@/components/EditItemDialog";
 import { ItemDialog } from "@/components/ItemDialog";
 import { listTasks } from "@/lib/content";
-import { getHomework } from "@/lib/sync";
 import { subjectHues } from "@/lib/content";
 import { addDays, diffDays, fmtShort, pragueNow, relativeDay, fmtDateTime } from "@/lib/dates";
 import { FilterBar } from "@/components/FilterBar";
@@ -33,10 +32,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const subjectFilter = sp.s ?? "";
   const tasks = listTasks(user.id, user.class_id, done, history).filter((t) => (!subjectFilter || (subjectFilter === "-" ? !t.subject_name : t.subject_name === subjectFilter)) && (!until || (!!t.due_date && t.due_date <= until)));
   const startAt = startTimes(user);
-  // domácí úkoly z Bakalářů (jen ke čtení): otevřené nebo hotové podle přepínače, filtry předmětu a termínu platí i pro ně
-  const hw = (await getHomework(user)).data?.items ?? [];
   const hues = subjectHues(user.class_id);
-  const homework = hw.filter((h) => (history ? false : done ? h.done : !h.done && h.end >= addDays(today, -7)) && (!subjectFilter || (subjectFilter !== "-" && h.subject === subjectFilter)) && (!until || h.end <= until));
   const filtered = !!(subjectFilter || until);
   const sub = history ? "Úkoly, jejichž termín už uplynul" : "Co ještě zbývá udělat";
 
@@ -93,39 +89,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             );
           })}
         </div>
-      ) : !homework.length ? (
+      ) : (
         <div className="empty">{filtered ? "Filtru nic neodpovídá." : history ? "Historie je zatím prázdná. Úkoly po termínu se tu schovají, nic se nemaže." : done ? "Zatím nemáš nic hotového." : emptyTasks()}</div>
-      ) : null}
-      {homework.length > 0 && (
-        <section style={{ marginTop: tasks.length ? 28 : 0 }}>
-          <h2 className="group-title">Domácí úkoly z Bakalářů</h2>
-          <div className="card rows split">
-            {homework.map((h) => {
-              const days = diffDays(today, h.end);
-              return (
-                <div key={h.id} className={`item${h.done ? " is-done" : ""}`}>
-                  <span className="hw-ico" title="Z Bakalářů, jen ke čtení"><Icon name="book" size={18} /></span>
-                  <div className="item-main">
-                    <div className="item-title">{h.content.split("\n")[0].slice(0, 140) || "Domácí úkol"}</div>
-                    <div className="item-meta">
-                      {h.subject && <span className="chip" style={{ ["--hue" as string]: `var(--h-${hues.get(h.subjectId) ?? "gray"})` }}>{h.subject}</span>}
-                      <span className="chip plain">Bakaláři</span>
-                      {h.teacher && <span className="by">{h.teacher}</span>}
-                      <span className={`due${!h.done && days < 0 ? " late" : !h.done && days <= 1 ? " soon" : ""}`}>{[`${fmtShort(h.end)} · ${relativeDay(h.end, today)}`, startAt(h.end, h.subject)].filter(Boolean).join(" · ")}</span>
-                    </div>
-                    {h.attachments.length > 0 && (
-                      <div className="item-meta hw-atts">
-                        {h.attachments.map((a) => <a key={a.id} className="btn small" href={`/komunikace/priloha?k=komens&id=${encodeURIComponent(a.id)}&n=${encodeURIComponent(a.name)}`} download><Icon name="download" size={14} /> {a.name}{a.size ? ` · ${a.size < 1048576 ? Math.max(1, Math.round(a.size / 1024)) + " kB" : (a.size / 1048576).toFixed(1).replace(".", ",") + " MB"}` : ""}</a>)}
-                      </div>
-                    )}
-                    {(h.content.includes("\n") || h.content.length > 140 || h.notice) && <Clamp text={[h.content, h.notice].filter(Boolean).join("\n\n")} />}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="hint">Domácí úkoly se jen čtou z Bakalářů. Odškrtnout nebo upravit je můžeš v Bakalářích.</p>
-        </section>
       )}
     </div>
   );

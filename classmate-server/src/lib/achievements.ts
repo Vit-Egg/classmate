@@ -1,14 +1,12 @@
 /**
  * Pochvaly: sběr čísel o uživateli, vyhodnocení a ukládání odemčených. Texty a podmínky jsou v achievements-defs.ts.
- * Počítá se jen z toho, co už server má (databáze a paměť s daty z Bakalářů), nic se nestahuje. Odemčené zůstávají navždy.
+ * Počítá se jen z toho, co už server má v databázi, nic se nestahuje. Odemčené zůstávají navždy.
  * Žádné zprávy ani upozornění: pochvaly jsou doplněk a nesmí se plést mezi důležité věci (známky, rozvrh, absence). Nové se jen označí na stránce.
  */
 import { all, get, run } from "./db";
 import { ACHIEVEMENTS, points, LEVELS, MAX_POINTS, type Achievement, type Meter, type Stats } from "./achievements-defs";
 import { addDays, diffDays, dowOf, pragueNow, TZ } from "./dates";
-import { weightedAverage } from "./normalize";
 import { parseSocials } from "./socials";
-import { peekAbsence, peekMarks } from "./sync";
 import { USER_SELECT, type User } from "./session";
 
 const safe = <T,>(f: () => T, fallback: T): T => {
@@ -45,74 +43,14 @@ const nextSchoolDay = (d: string) => {
   return n;
 };
 
-function markStats(user: User) {
-  const out = { marks: 0, ones: 0, fives: 0, avg: null as number | null, run1: 0, run5: 0, perfectSubjects: 0, goodSubjects: 0, comebacks: 0, onesInDay: 0, percent100: 0 };
-  const data = safe(() => peekMarks(user), null);
-  if (!data) return out;
-  const all_: { subject: string; value: number; date: string; id: string; weight: number }[] = [];
-  for (const s of data.subjects) {
-    const own = s.marks.filter((m) => m.value != null).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-    for (const m of own) all_.push({ subject: s.id, value: m.value!, date: m.date, id: m.id, weight: m.weight || 1 });
-    out.percent100 += s.marks.filter((m) => m.percent != null && m.percent >= 100).length;
-    if (own.length >= 3) {
-      if (own.every((m) => m.value === 1)) out.perfectSubjects++;
-      const a = weightedAverage(own.map((m) => ({ value: m.value, weight: m.weight || 1 })));
-      if (a != null && a <= 1.5 + 1e-9) out.goodSubjects++;
-    }
-    for (let i = 1; i < own.length; i++) if (own[i].value === 1 && own[i - 1].value! >= 4) out.comebacks++;
-  }
-  all_.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  out.marks = all_.length;
-  out.ones = all_.filter((m) => m.value === 1).length;
-  out.fives = all_.filter((m) => m.value >= 5).length;
-  out.avg = weightedAverage(all_);
-  let r1 = 0;
-  let r5 = 0;
-  const perDay = new Map<string, number>();
-  for (const m of all_) {
-    r1 = m.value === 1 ? r1 + 1 : 0;
-    r5 = m.value >= 5 ? r5 + 1 : 0;
-    out.run1 = Math.max(out.run1, r1);
-    out.run5 = Math.max(out.run5, r5);
-    if (m.value === 1) perDay.set(m.date, (perDay.get(m.date) ?? 0) + 1);
-  }
-  out.onesInDay = Math.max(0, ...perDay.values());
-  return out;
+/** Známky už aplikace nemá (byly z Bakalářů); trofeje za známky se nenabízejí. */
+function markStats(_user: User) {
+  return { marks: 0, ones: 0, fives: 0, avg: null as number | null, run1: 0, run5: 0, perfectSubjects: 0, goodSubjects: 0, comebacks: 0, onesInDay: 0, percent100: 0 };
 }
 
-function absenceStats(user: User, today: string) {
-  const out = { absLoaded: false, absPct: 0, absMaxSubjectPct: 0, absRun: 0, unexcused: 0, late: 0, soon: 0, absHours: 0, cleanDays: 0 };
-  const data = safe(() => peekAbsence(user), null);
-  if (!data) return out;
-  out.absLoaded = true;
-  const lessons = data.subjects.reduce((n, s) => n + s.lessons, 0);
-  const missed = data.subjects.reduce((n, s) => n + s.missed, 0);
-  out.absPct = lessons > 0 ? (missed / lessons) * 100 : 0;
-  out.absMaxSubjectPct = Math.max(0, ...data.subjects.filter((s) => s.lessons >= 8).map((s) => (s.missed / s.lessons) * 100));
-  const absent: string[] = [];
-  for (const d of data.days) {
-    const h = d.missed + d.excused + d.unsolved;
-    out.absHours += h;
-    out.unexcused += d.missed;
-    out.late += d.late;
-    out.soon += d.soon;
-    if (h > 0) absent.push(d.date);
-  }
-  absent.sort();
-  // řada nepřítomných školních dnů (víkend ji nepřeruší); délka se bere v kalendářních dnech od prvního do posledního dne řady
-  let start = "";
-  let prev = "";
-  for (const d of absent) {
-    if (!(prev && nextSchoolDay(prev) === d)) start = d;
-    prev = d;
-    out.absRun = Math.max(out.absRun, diffDays(start, d) + 1);
-  }
-  const y = Number(today.slice(0, 4));
-  const yearStart = `${Number(today.slice(5, 7)) >= 9 ? y : y - 1}-09-01`;
-  const last = absent.length ? absent[absent.length - 1] : "";
-  const since = last > yearStart ? last : yearStart;
-  out.cleanDays = Math.max(0, diffDays(since, today));
-  return out;
+/** Absenci už aplikace nemá (byla z Bakalářů); trofeje za docházku se nenabízejí. */
+function absenceStats(_user: User, _today: string) {
+  return { absLoaded: false, absPct: 0, absMaxSubjectPct: 0, absRun: 0, unexcused: 0, late: 0, soon: 0, absHours: 0, cleanDays: 0 };
 }
 
 export function collectStats(user: User): Stats {
@@ -191,12 +129,12 @@ export function collectStats(user: User): Stats {
     totp: row?.totp_enabled ? 1 : 0,
     avatar: count("SELECT COUNT(*) n FROM avatars WHERE user_id = ?", id) ? 1 : 0,
     contacts: Object.keys(parseSocials(row?.socials)).length,
-    bakalari: row?.bakalari_refresh_enc ? 1 : 0,
+    bakalari: 0,
     mailOn: row && row.email_notify !== "off" ? 1 : 0,
     push: count("SELECT (SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ?) + (SELECT COUNT(*) FROM app_devices WHERE user_id = ? AND fcm_token IS NOT NULL) n", id, id) ? 1 : 0,
     calFeed: count("SELECT COUNT(*) n FROM calendar_feeds WHERE user_id = ?", id) ? 1 : 0,
     todoist: count("SELECT COUNT(*) n FROM todoist_accounts WHERE user_id = ?", id) ? 1 : 0,
-    strava: count("SELECT COUNT(*) n FROM strava_accounts WHERE user_id = ?", id) ? 1 : 0,
+    strava: 0,
     shareStats: row?.share_marks_stats === 1 ? 1 : 0,
     appDevice: count("SELECT COUNT(*) n FROM app_devices WHERE user_id = ?", id) ? 1 : 0,
     msgRead: count("SELECT COUNT(*) n FROM messages WHERE user_id = ? AND read_at IS NOT NULL", id),

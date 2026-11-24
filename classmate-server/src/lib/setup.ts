@@ -4,7 +4,6 @@ import { z } from "zod";
 import { get, run, tx } from "./db";
 import { hashPassword } from "./crypto";
 import { passwordProblem } from "./password-policy";
-import { normalizeBaseUrl, BakalariError } from "./bakalari";
 
 export const needsSetup = () => !get("SELECT 1 FROM users LIMIT 1");
 
@@ -29,7 +28,6 @@ const Input = z.object({
   email: z.string().trim().toLowerCase().email("Napiš platný e-mail.").max(200),
   password: z.string().max(200, "Heslo je moc dlouhé."),
   school: z.string().trim().min(2, "Název školy musí mít aspoň 2 znaky.").max(100, "Název školy je moc dlouhý."),
-  bakalari: z.string().trim().max(300).default(""),
   class: z.string().trim().min(1, "Napiš název své třídy.").max(40, "Název třídy je moc dlouhý."),
 });
 
@@ -44,18 +42,10 @@ export function createServer(input: unknown, token: string): number {
   const v = r.data;
   const weak = passwordProblem(v.password, v.email, v.name);
   if (weak) throw new SetupError(weak);
-  let url: string | null = null;
-  if (v.bakalari) {
-    try {
-      url = normalizeBaseUrl(/^https?:\/\//i.test(v.bakalari) ? v.bakalari : `https://${v.bakalari}`);
-    } catch (e) {
-      throw new SetupError(e instanceof BakalariError ? e.message : "Neplatná adresa Bakalářů.");
-    }
-  }
   return tx(() => {
     if (!needsSetup()) throw new SetupError("Server už je nastavený.");
     const now = Date.now();
-    const school = Number(run("INSERT INTO schools (name, bakalari_url, created_at) VALUES (?, ?, ?)", v.school, url, now).lastInsertRowid);
+    const school = Number(run("INSERT INTO schools (name, created_at) VALUES (?, ?)", v.school, now).lastInsertRowid);
     const cls = Number(run("INSERT INTO classes (school_id, name, roster) VALUES (?, ?, ?)", school, v.class, v.name).lastInsertRowid); // správce je prvním jménem v seznamu třídy
     return Number(
       run("INSERT INTO users (email, name, password_hash, role, school_id, class_id, created_at) VALUES (?, ?, ?, 'admin', ?, ?, ?)", v.email, v.name, hashPassword(v.password), school, cls, now).lastInsertRowid,

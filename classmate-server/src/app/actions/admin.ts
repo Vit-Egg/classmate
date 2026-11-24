@@ -5,8 +5,10 @@ import { requireAdmin } from "@/lib/session";
 import { plural, pragueLocalToMs } from "@/lib/dates";
 import * as svc from "@/lib/services";
 import { audit } from "@/lib/audit";
-import { syncNow } from "@/lib/background";
 import type { ActionState } from "@/lib/action";
+import { redirect } from "next/navigation";
+import { get } from "@/lib/db";
+import { createInvite, InviteError } from "@/lib/invites";
 
 async function guard(fn: (admin: Awaited<ReturnType<typeof requireAdmin>>) => void): Promise<ActionState> {
   const admin = await requireAdmin();
@@ -62,9 +64,6 @@ export async function signOutUser(fd: FormData) {
 export async function resetUserTotp(fd: FormData) {
   await guard((a) => svc.adminResetTotp(a, Number(fd.get("user"))));
 }
-export async function disconnectUserBakalari(fd: FormData) {
-  await guard((a) => svc.adminDisconnectBakalari(a, Number(fd.get("user"))));
-}
 export async function clearUserSocials(fd: FormData) {
   await guard((a) => svc.adminClearSocials(a, Number(fd.get("user"))));
 }
@@ -92,17 +91,22 @@ export async function sendAnnouncement(_: ActionState, fd: FormData): Promise<Ac
   }
 }
 
-/** Správa → Stav serveru: spustí synchronizaci Bakalářů všech aktivních uživatelů hned (běží na pozadí, průběh je vidět ve Stavu serveru). */
-export async function syncBakalariNow(): Promise<ActionState> {
-  const admin = await requireAdmin();
-  const r = syncNow();
-  if (r === "running") return { ok: true, message: "Synchronizace právě běží, počkej, až doběhne." };
-  audit(admin, "sync_now");
-  revalidatePath("/sprava");
-  return { ok: true, message: "Synchronizace spuštěna. Hotovo bude za chvíli, výsledek je ve Stavu serveru (obnov stránku)." };
-}
-
 /** Zrušení naplánovaného oznámení. */
 export async function cancelAnnouncementAction(fd: FormData) {
   await guard((a) => svc.adminCancelAnnouncement(a, Number(fd.get("id"))));
+}
+
+/** Správa → Členové: vytvoří pozvánku pro jméno ze seznamu třídy a ukáže odkaz, který správce pošle. */
+export async function createInviteAction(fd: FormData) {
+  const admin = await requireAdmin();
+  const userId = Number(fd.get("user"));
+  let code: string;
+  try {
+    code = createInvite(userId, admin.id);
+  } catch (e) {
+    if (e instanceof InviteError) redirect(`/sprava?chyba=${encodeURIComponent(e.message)}#clenove`);
+    throw e;
+  }
+  audit(admin, "invite_create", { targetUser: { id: userId, name: get<{ name: string }>("SELECT name FROM users WHERE id = ?", userId)?.name ?? "" } });
+  redirect(`/sprava?pozvanka=${encodeURIComponent(code)}&pro=${userId}#clenove`);
 }

@@ -44,8 +44,6 @@ export type Achievement = {
 };
 
 export const CATEGORIES: { id: Category; label: string; hint: string; icon: string }[] = [
-  { id: "marks", icon: "star", label: "Prospěch", hint: "známky, série jedniček a průměry" },
-  { id: "attendance", icon: "calendar", label: "Docházka", hint: "absence, pozdní příchody a dny bez absence" },
   { id: "homework", icon: "check", label: "Domácí příprava", hint: "úkoly, testy a učení" },
   { id: "notes", icon: "pen", label: "Sešity", hint: "poznámky, tabule a sdílení" },
   { id: "class", icon: "users", label: "Třída a svět kolem", hint: "pokladna, služby, sport a propojení" },
@@ -327,7 +325,9 @@ const FLAVOR: Record<string, string> = {
   clean100: "Sto dní na stráži. Pevné nervy.",
   meta50: "Padesát trofejí. To chce vitrínu.",
 };
-export const ACHIEVEMENTS: Achievement[] = _ACH.map((a) => (FLAVOR[a.id] ? { ...a, flavor: FLAVOR[a.id] } : a));
+/** Trofeje, které stály na Bakalářích (známky, absence, propojení) nebo na Strava.cz, se po přestavbě nenabízejí. */
+const REMOVED = new Set(["strava", "bakalari", "stats"]);
+export const ACHIEVEMENTS: Achievement[] = _ACH.filter((a) => a.cat !== "marks" && a.cat !== "attendance" && !REMOVED.has(a.id)).map((a) => (FLAVOR[a.id] ? { ...a, flavor: FLAVOR[a.id] } : a));
 
 export const byId = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
 export const MAX_POINTS = ACHIEVEMENTS.reduce((n, a) => n + points(a), 0);

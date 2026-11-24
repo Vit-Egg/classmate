@@ -8,7 +8,7 @@ import { removeEvent, saveEvent } from "@/app/actions/calendar";
 import type { CalEvent, CalKind } from "@/lib/calendar";
 
 const WD = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
-const KIND_LABEL: Record<CalKind, string> = { test: "Test a zkoušení", task: "Úkol", change: "Změna", event: "Událost", other: "Ostatní", mark: "Známka", absence: "Absence" };
+const KIND_LABEL: Record<CalKind, string> = { test: "Test a zkoušení", task: "Úkol", change: "Změna", event: "Událost", other: "Ostatní" };
 const dow = (iso: string) => ((new Date(iso + "T00:00:00Z").getUTCDay() + 6) % 7) + 1;
 const addDays = (iso: string, n: number) => new Date(Date.parse(iso + "T00:00:00Z") + n * 86_400_000).toISOString().slice(0, 10);
 const longDate = (iso: string) => new Intl.DateTimeFormat("cs-CZ", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(Date.parse(iso + "T00:00:00Z"));
@@ -175,7 +175,7 @@ export function CalendarView({ events, view, gridFrom, weeks, month, today }: { 
           );
         })}
       </div>
-      <p className="hint cal-hint">Klikni na den pro podrobnosti. Změny v rozvrhu a svátky se berou z Bakalářů asi 10 týdnů zpět a 5 měsíců dopředu.</p>
+      <p className="hint cal-hint">Klikni na den pro podrobnosti.</p>
       {dialog}
     </>
   );

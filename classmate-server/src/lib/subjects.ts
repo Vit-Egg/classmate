@@ -1,12 +1,10 @@
-/** Předměty: přehled všeho k jednomu předmětu (rozvrh, učitelé, testy, úkoly, známky, absence, poznámky, témata hodin). */
+/** Předměty: přehled všeho k jednomu předmětu (rozvrh, učitelé, testy, úkoly, poznámky). Známky a absence už aplikace nemá. */
 import { all } from "./db";
 import { listTasks, listTests } from "./content";
 import { addDays, mondayOf, pragueNow } from "./dates";
-import { weightedAverage } from "./normalize";
 import { sharedNotes } from "./services";
 import { isSelfStudy } from "./selfstudy";
-import { fold } from "./text";
-import { getAbsence, getMarks, getTimetable, getTimetableWeek, userSubjects, type SubjectRowFull } from "./sync";
+import { getTimetable, getTimetableWeek, userSubjects, type SubjectRowFull } from "./sync";
 import type { User } from "./session";
 import type { Mark, Timetable } from "./types";
 
@@ -37,19 +35,18 @@ const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))];
 
 export async function subjectsOverview(user: User): Promise<{ items: SubjectSummary[]; stale: boolean }> {
   const today = pragueNow().date;
-  const [perm, marks] = await Promise.all([getTimetable(user, "permanent"), getMarks(user)]);
+  const perm = await getTimetable(user, "permanent");
   const tests = listTests(user.id, user.class_id, today);
   const tasks = listTasks(user.id, user.class_id, false);
   const noteCounts = new Map(all<{ subject_id: number; n: number }>("SELECT subject_id, COUNT(*) n FROM notes WHERE deleted_at IS NULL AND user_id = ? AND subject_id IS NOT NULL GROUP BY subject_id", user.id).map((r) => [r.subject_id, r.n]));
   const items = userSubjects(user.id).map((subject) => {
     const slots = permanentSlots(perm.data, subject.bk_id);
-    const m = marks.data?.subjects.find((s) => s.id === subject.bk_id);
     const t = tests.find((x) => x.subject_name === subject.name);
     return {
       subject,
       teachers: uniq(slots.map((s) => s.teacher)),
       hoursPerWeek: slots.length,
-      average: m ? weightedAverage(m.marks) : null,
+      average: null as number | null,
       nextTest: t ? { date: t.date, topic: t.topic, oral: !!t.oral } : undefined,
       openTasks: tasks.filter((x) => x.subject_name === subject.name).length,
       notes: noteCounts.get(subject.id) ?? 0,
@@ -66,7 +63,7 @@ export async function subjectDetail(user: User, id: number) {
   const today = pragueNow().date;
   const thisMonday = mondayOf(today);
   const weeks = [-3, -2, -1, 0, 1].map((n) => addDays(thisMonday, n * 7));
-  const [perm, marks, absence, ...weekResults] = await Promise.all([getTimetable(user, "permanent"), getMarks(user), getAbsence(user), ...weeks.map((m) => getTimetableWeek(user, m))]);
+  const [perm, ...weekResults] = await Promise.all([getTimetable(user, "permanent"), ...weeks.map((m) => getTimetableWeek(user, m))]);
 
   const slots = permanentSlots(perm.data, subject.bk_id);
   const hours = new Map((perm.data?.hours ?? []).map((h) => [h.hour, h]));
@@ -85,9 +82,7 @@ export async function subjectDetail(user: User, id: number) {
   themes.sort((a, b) => b.date.localeCompare(a.date) || b.hour - a.hour);
   upcoming.sort((a, b) => a.date.localeCompare(b.date) || a.hour - b.hour);
 
-  const m = marks.data?.subjects.find((s) => s.id === subject.bk_id);
-  const markList: Mark[] = m ? [...m.marks].sort((a, b) => b.date.localeCompare(a.date)) : [];
-  const abs = absence.data?.subjects.find((s) => fold(s.name) === fold(subject.name));
+  const markList: Mark[] = [];
 
   return {
     subject,
@@ -101,11 +96,11 @@ export async function subjectDetail(user: User, id: number) {
     tests: listTests(user.id, user.class_id, today).filter((t) => t.subject_name === subject.name),
     tasks: listTasks(user.id, user.class_id, false).filter((t) => t.subject_name === subject.name),
     marks: markList,
-    average: m ? weightedAverage(m.marks) : null,
-    averageText: m?.averageText,
-    absence: abs,
+    average: null as number | null,
+    averageText: undefined as string | undefined,
+    absence: undefined as { name: string; lessons: number; missed: number; late: number; soon: number; school: number } | undefined,
     ownNotes: all<{ id: number; title: string; updated_at: number }>("SELECT id, title, updated_at FROM notes WHERE user_id = ? AND subject_id = ? AND deleted_at IS NULL ORDER BY pinned DESC, updated_at DESC LIMIT 20", user.id, subject.id),
     sharedNotes: sharedNotes(user).filter((n) => n.subject_id === subject.id).map((n) => ({ id: n.id, title: n.title, author: n.author })),
-    stale: !perm.data || !marks.data,
+    stale: !perm.data,
   };
 }

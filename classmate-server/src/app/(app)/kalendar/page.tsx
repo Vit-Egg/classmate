@@ -4,7 +4,6 @@ import { CalendarSubscribe } from "@/components/CalendarSubscribe";
 import { CalendarView } from "@/components/CalendarView";
 import { LayerToggles } from "@/components/LayerToggles";
 import { PersistedSeg } from "@/components/PersistedSeg";
-import { SyncNotice } from "@/components/SyncNotice";
 import { ALL_KINDS, KINDS, calendarEvents, type CalKind } from "@/lib/calendar";
 import { addDays, dowOf, mondayOf, pragueNow } from "@/lib/dates";
 import { FEED_KINDS, feedKinds, feedLastUsed, feedToken } from "@/lib/calendar-feed";
@@ -80,7 +79,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </div>
       <LayerToggles kinds={KINDS} active={active} />
       <div style={{ height: 18 }} />
-      {partial && <SyncNotice result={{ data: null, stale: true, error: "network" }} />}
       <CalendarView events={events} view={view} gridFrom={gridFrom} weeks={weekCount} month={month} today={today} />
     </div>
   );

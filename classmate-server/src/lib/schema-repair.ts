@@ -162,22 +162,6 @@ const TABLES = [
      state INTEGER NOT NULL DEFAULT 0,
      PRIMARY KEY (user_id, task_id)
    )`,
-  `CREATE TABLE IF NOT EXISTS strava_accounts (
-     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-     username TEXT NOT NULL,
-     password_enc TEXT NOT NULL,
-     created_at INTEGER NOT NULL,
-     canteen TEXT NOT NULL DEFAULT ''
-   )`,
-  `CREATE TABLE IF NOT EXISTS mail_accounts (
-     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-     kind TEXT NOT NULL,
-     address TEXT NOT NULL,
-     secret_enc TEXT NOT NULL,
-     created_at INTEGER NOT NULL,
-     last_ok_at INTEGER,
-     PRIMARY KEY (user_id, kind)
-   )`,
   `CREATE TABLE IF NOT EXISTS subject_summaries (
      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
      subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
@@ -344,7 +328,6 @@ const COLUMNS: [table: string, column: string, ddl: string][] = [
   ["schools", "strava_canteen", "TEXT"],
   ["schools", "training_enabled", "INTEGER NOT NULL DEFAULT 0"],
   ["users", "last_active_at", "INTEGER"],
-  ["strava_accounts", "canteen", "TEXT NOT NULL DEFAULT ''"],
   ["schools", "ms_domain", "TEXT"],
   ["schools", "ms_enabled", "INTEGER NOT NULL DEFAULT 0"],
   ["schools", "any_class", "INTEGER NOT NULL DEFAULT 0"],

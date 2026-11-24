@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const base = siteUrl();
   const user = await getCurrentUser();
-  if (!user) return NextResponse.redirect(new URL("/prihlaseni", base));
+  if (!user) return NextResponse.redirect(new URL("/", base));
   if (!todoistOAuthConfigured()) return NextResponse.redirect(new URL("/nastaveni?k=propojeni&td=nenastaveno#todoist", base));
   const state = randomToken(16);
   const project = (req.nextUrl.searchParams.get("project") ?? "").trim().slice(0, 120);

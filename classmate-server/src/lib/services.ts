@@ -17,7 +17,7 @@ import { passwordProblem } from "./password-policy";
 import { DEFAULT_MODELS, getAiConfig, keyId, saveAiConfig, type AiKey } from "./ai-config";
 import { get, run, all, tx, rateLimit } from "./db";
 import { addDays, dayName, dowOf, renderNoteTitle, schoolYearEnd } from "./dates";
-import { normalizeBaseUrl, BakalariError, internalHost } from "./bakalari";
+import { internalHost } from "./net";
 import { peekTimetable, subjectGroups, userSubjects } from "./sync";
 import { taskOwner, testOwner } from "./content";
 import { notify, notifyClassmates } from "./messages";
@@ -555,14 +555,9 @@ function admin(user: User) {
   if (user.role !== "admin") fail("Tohle smí jen správce.");
 }
 
-function schoolUrl(raw: unknown) {
-  const s = String(raw ?? "").trim();
-  if (!s) return null;
-  try {
-    return normalizeBaseUrl(s);
-  } catch (e) {
-    return fail(e instanceof BakalariError ? e.message : "Neplatná adresa.");
-  }
+/** Adresa Bakalářů u školy se už nepoužívá (třídní aplikace s Bakaláři nekomunikuje). */
+function schoolUrl(_raw: unknown): string | null {
+  return null;
 }
 
 const schoolName = (v: unknown) => parse(z.string().trim().min(2, "Název školy musí mít aspoň 2 znaky.").max(100), v);
@@ -798,12 +793,6 @@ export function adminResetTotp(user: User, userId: number) {
   run("UPDATE users SET totp_enabled = 0, totp_secret_enc = NULL, totp_pending_enc = NULL WHERE id = ?", userId);
   run("DELETE FROM recovery_codes WHERE user_id = ?", userId);
   audit(user, "user_totp_reset", { targetUser: { id: userId, name: nameOf(userId) } });
-}
-
-export function adminDisconnectBakalari(user: User, userId: number) {
-  admin(user);
-  run("UPDATE users SET bakalari_refresh_enc = NULL WHERE id = ?", userId);
-  audit(user, "user_bakalari_disconnect", { targetUser: { id: userId, name: nameOf(userId) } });
 }
 
 /** Správce smaže uživateli všechny vyplněné kontakty (telefon, e-mail, sociální sítě a web) z profilu (například nevhodný odkaz). */

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SyncNotice } from "@/components/SyncNotice";
 import { fmtShort, pragueNow, relativeDay } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { subjectsOverview } from "@/lib/subjects";
@@ -23,7 +22,6 @@ export default async function SubjectsPage() {
           <p className="subtitle">Všechno k jednotlivým předmětům na jednom místě</p>
         </div>
       </div>
-      {stale && <SyncNotice result={{ data: null, stale: true, error: "network" }} />}
       {items.length ? (
         <div className="subj-grid">
           {items.map(({ subject: s, teachers, hoursPerWeek, average, nextTest, openTasks, notes }) => (
@@ -43,7 +41,7 @@ export default async function SubjectsPage() {
           ))}
         </div>
       ) : (
-        <div className="empty">Zatím tu nejsou žádné předměty. Objeví se po načtení rozvrhu z Bakalářů.</div>
+        <div className="empty">Zatím tu nejsou žádné předměty. Objeví se, až správce zadá rozvrh.</div>
       )}
     </div>
   );

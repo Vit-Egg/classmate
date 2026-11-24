@@ -32,6 +32,6 @@ export async function removeMessages(id?: number) {
 export async function setCategory(fd: FormData) {
   const user = await requireUser();
   const c = String(fd.get("category"));
-  if (["timetable", "marks", "absence", "classwork", "komens", "duty", "cash", "notes"].includes(c)) toggleCategory(user.id, c as Category);
+  if (["timetable", "classwork", "duty", "cash", "notes"].includes(c)) toggleCategory(user.id, c as Category);
   revalidatePath("/", "layout");
 }

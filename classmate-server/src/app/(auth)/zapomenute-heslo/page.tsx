@@ -17,7 +17,7 @@ export default function ForgotPassword() {
         <div style={{ height: 8 }} />
         <Submit className="btn primary big">Poslat odkaz</Submit>
       </ActionForm>
-      <p className="alt"><Link href="/prihlaseni">Zpět na přihlášení</Link></p>
+      <p className="alt"><Link href="/">Zpět na přihlášení</Link></p>
     </>
   );
 }

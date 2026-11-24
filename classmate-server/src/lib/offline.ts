@@ -1,7 +1,7 @@
 /** Stahování stránek dopředu pro offline režim v aplikaci (service worker je uloží; viz public/sw.js). Jen v prohlížeči. */
 const KEY = "classmate:offline-prefetch";
 const EVERY = 3 * 60 * 60 * 1000;
-const CORE = ["/dnes", "/rozvrh", "/ukoly", "/testy-a-zkouseni", "/znamky", "/absence", "/kalendar", "/predmety", "/poznamky", "/obedy", "/komunikace", "/nastenka", "/nastaveni"];
+const CORE = ["/dnes", "/rozvrh", "/ukoly", "/testy-a-zkouseni", "/kalendar", "/predmety", "/poznamky", "/nastenka", "/nastaveni"];
 const MAX_NOTES = 25;
 
 /** Aplikace v telefonu (WebView) nebo nainstalovaná PWA; v běžném prohlížeči se nic nestahuje na zapas. */

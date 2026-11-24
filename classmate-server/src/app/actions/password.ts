@@ -17,5 +17,5 @@ export async function resetPasswordAction(_: ActionState, fd: FormData): Promise
   if (pw !== String(fd.get("password2") ?? "")) return { error: "Hesla se neshodují." };
   const err = await resetPassword(String(fd.get("t") ?? ""), pw);
   if (err) return { error: err };
-  redirect("/prihlaseni?reset=1");
+  redirect("/?reset=1");
 }

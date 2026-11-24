@@ -22,30 +22,26 @@ const items = [
   { href: "/nastenka", label: "Nástěnka", icon: "pin", board: true },
   { href: "/sluzby", label: "Služby", icon: "broom", duty: true },
   { href: "/pokladna", label: "Pokladna", icon: "coin", cash: true },
-  { href: "/komunikace", label: "Komunikace", icon: "mail" },
-  { href: "/obedy", label: "Obědy", icon: "utensils", lunch: true },
   { href: "/denik", label: "Tréninkový deník", icon: "pulse", training: true },
   { href: "/predmety", label: "Předměty", icon: "book" },
   { href: "/poznamky", label: "Poznámky", icon: "pen" },
-  { href: "/znamky", label: "Známky", icon: "star" },
   { href: "/trofeje", label: "Trofeje", icon: "trophy" },
-  { href: "/absence", label: "Absence", icon: "absence" },
   { href: "/sprava", label: "Správa", icon: "shield", admin: true },
   { href: "/nastaveni", label: "Nastavení", icon: "settings" },
 ];
 
 /** Menu: nahoře jen to, co se používá denně, zbytek je pod „Další“ (sbalené, pamatuje se v prohlížeči). Při sbalení zůstane vidět jen stránka, na které jsi, a zmizí, až z ní odejdeš. */
 const GROUPS = [
-  { id: "main", label: "", hrefs: ["/dnes", "/rozvrh", "/kalendar", "/ukoly", "/testy-a-zkouseni", "/znamky", "/poznamky", "/predmety", "/studium"] },
-  { id: "more", label: "Další", hrefs: ["/nastenka", "/komunikace", "/absence", "/spoluzaci", "/sluzby", "/pokladna", "/obedy", "/denik", "/trofeje"] },
+  { id: "main", label: "", hrefs: ["/dnes", "/rozvrh", "/kalendar", "/ukoly", "/testy-a-zkouseni", "/poznamky", "/predmety", "/studium"] },
+  { id: "more", label: "Další", hrefs: ["/nastenka", "/spoluzaci", "/sluzby", "/pokladna", "/denik", "/trofeje"] },
 ];
 const CLOSED_KEY = "nav-closed4";
 
 /** Telefon, panel „Více“: nejdřív tři kategorie, po klepnutí se v tom samém panelu ukážou jejich stránky. */
 const MORE_GROUPS = [
-  { id: "learn", label: "Učení", icon: "cap", hrefs: ["/znamky", "/poznamky", "/predmety", "/studium", "/kalendar"] },
-  { id: "admin", label: "Administrativa", icon: "mail", hrefs: ["/nastenka", "/absence", "/komunikace", "/spoluzaci", "/sluzby", "/pokladna"] },
-  { id: "tools", label: "Nástroje", icon: "settings", hrefs: ["/obedy", "/denik", "/trofeje", "/nastaveni", "/sprava"] },
+  { id: "learn", label: "Učení", icon: "cap", hrefs: ["/poznamky", "/predmety", "/studium", "/kalendar"] },
+  { id: "admin", label: "Administrativa", icon: "mail", hrefs: ["/nastenka", "/spoluzaci", "/sluzby", "/pokladna"] },
+  { id: "tools", label: "Nástroje", icon: "settings", hrefs: ["/denik", "/trofeje", "/nastaveni", "/sprava"] },
 ];
 
 const PRIMARY = new Set(["/dnes", "/rozvrh", "/ukoly", "/testy-a-zkouseni"]);
@@ -65,7 +61,7 @@ function ring(ctx: AudioContext) {
   }
 }
 
-export function Sidebar({ school, className, isAdmin, slots, unread: initialUnread, komens = 0, lunch = false, study = false, cash = false, duty = false, board = false, boardNew = 0, training = false, me }: { me: { name: string; src: string | null }; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; komens?: number; lunch?: boolean; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number; training?: boolean }) {
+export function Sidebar({ school, className, isAdmin, slots, unread: initialUnread, study = false, cash = false, duty = false, board = false, boardNew = 0, training = false, me }: { me: { name: string; src: string | null }; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number; training?: boolean }) {
   const path = usePathname();
   const logo = useRef<HTMLButtonElement>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -102,14 +98,13 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
     } catch {}
   };
 
-  const visible = items.filter((i) => (!i.admin || isAdmin) && (!("lunch" in i) || lunch) && (!("study" in i) || study) && (!("cash" in i) || cash) && (!("duty" in i) || duty) && (!("board" in i) || board) && (!("training" in i) || training));
+  const visible = items.filter((i) => (!i.admin || isAdmin) && (!("study" in i) || study) && (!("cash" in i) || cash) && (!("duty" in i) || duty) && (!("board" in i) || board) && (!("training" in i) || training));
 
   const link = (i: (typeof items)[number]) => (
     <Link key={i.href} href={i.href} title={i.label} aria-current={path.startsWith(i.href) ? "page" : undefined} className={PRIMARY.has(i.href) ? undefined : "nav-more"}>
       <Icon name={i.icon} />
       <span className="nav-label">{i.label}</span>
       {i.href === "/nastenka" && boardNew > 0 && <span className="nav-badge">{boardNew > 99 ? "99+" : boardNew}</span>}
-      {i.href === "/komunikace" && komens > 0 && <span className="nav-badge">{komens > 99 ? "99+" : komens}</span>}
     </Link>
   );
   const top = visible.filter((i) => i.href !== "/sprava" && i.href !== "/nastaveni");
@@ -141,7 +136,7 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
             const list = g.hrefs.map((h) => top.find((i) => i.href === h)).filter((i): i is (typeof items)[number] => !!i);
             if (!list.length) return null;
             const shut = !!g.label && closed.includes(g.id);
-            const badge = shut && g.hrefs.includes("/komunikace") && komens > 0;
+            const badge = false;
             return (
               <div key={g.id} className="nav-group" data-shut={shut || undefined}>
                 {gi > 0 && <span className="nav-sep" aria-hidden />}
@@ -180,7 +175,6 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
                         <button key={g.id} role="menuitem" className="more-cat" aria-current={list.some((i) => path.startsWith(i.href)) ? "page" : undefined} onClick={() => setMoreView(g.id)}>
                           <Icon name={g.icon} size={22} />
                           {g.label}
-                          {g.id === "admin" && komens > 0 && <span className="nav-badge">{komens > 99 ? "99+" : komens}</span>}
                         </button>
                       );
                     })}
@@ -220,7 +214,7 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
           <button className="kbd-hint" onClick={() => window.dispatchEvent(new CustomEvent("classmate:feedback"))}>
             Mám nápad
           </button>
-          <a className="kbd-hint made-by" href="https://plojharsim.cz" target="_blank" rel="noopener">Made by plojharsim</a>
+          <span className="kbd-hint made-by">made by <s>plojharsim</s> vitegg</span>
           {versionLabel() && <span className="app-ver" title={versionTitle()} onClick={tapVersion}>{versionLabel()}</span>}
         </div>
       </div>

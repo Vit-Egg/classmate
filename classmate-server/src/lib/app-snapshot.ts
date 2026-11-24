@@ -9,8 +9,7 @@ import { unreadCount } from "./messages";
 import { buildSlots, dayState, fmtMin, type Slot } from "./schedule";
 import { SELF_STUDY } from "./selfstudy";
 import { fcmEnabled } from "./fcm";
-import { stravaAccount, stravaMenu, isLunch } from "./strava";
-import { getTimetable, peekMarks, peekTimetable } from "./sync";
+import { getTimetable, peekTimetable } from "./sync";
 import type { Timetable } from "./types";
 import type { User } from "./session";
 
@@ -94,32 +93,6 @@ export function daySegments(date: string, slots: Slot[], allDay: string | undefi
   return out;
 }
 
-/** Poslední známky z paměti (bez sítě; synchronizace na pozadí je drží čerstvé), nejnovější první. */
-function latestMarks(user: User, limit: number) {
-  const data = peekMarks(user);
-  if (!data) return [];
-  return data.subjects
-    .flatMap((sub) => sub.marks.map((m) => ({ subject: sub.name, caption: m.caption || m.theme || "", value: m.text || (m.value == null ? "" : String(m.value)), weight: m.weight, date: m.date, isNew: m.isNew, id: m.id })))
-    .filter((m) => m.value)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
-    .slice(0, limit)
-    .map(({ id, ...m }) => m); // eslint-disable-line @typescript-eslint/no-unused-vars
-}
-
-/** Obědy nejbližších dnů se Strava.cz (jen má-li uživatel propojený účet); dlouhé čekání na Strava.cz nesmí zdržet widget. */
-async function lunchDays(userId: number, today: string) {
-  if (!stravaAccount(userId)) return null;
-  try {
-    const r = await Promise.race([stravaMenu(userId), new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 4000))]);
-    return r.days
-      .filter((d) => !d.closed && d.date >= today && d.meals.some(isLunch))
-      .slice(0, 3)
-      .map((d) => ({ date: d.date, meals: d.meals.filter(isLunch).map((m) => ({ soup: m.soup, kind: m.soup ? "Polévka" : m.label, name: m.name, price: m.price, ordered: m.ordered })) }));
-  } catch {
-    return null;
-  }
-}
-
 export async function buildSnapshot(user: User, nowMs = Date.now()) {
   const today = pragueNow(new Date(nowMs)).date;
   const thisMonday = mondayOf(today);
@@ -151,6 +124,7 @@ export async function buildSnapshot(user: User, nowMs = Date.now()) {
   const tests = listTests(user.id, user.class_id, today, addDays(today, 30)).filter((t) => !t.makeup || t.attend === 1).slice(0, 10).map((t) => ({ subject: t.subject_name, topic: t.topic, date: t.date, hue: t.hue, makeup: !!t.makeup, oral: !!t.oral }));
   return {
     v: 1, generatedAt: nowMs, push: fcmEnabled(), tz: TZ, user: { name: user.name }, unread: unreadCount(user.id), segments, lessons,
-    tasks, tasksOpen: openTasks.length, tests, marks: latestMarks(user, 8), lunch: await lunchDays(user.id, today),
+    // známky a obědy už aplikace nemá; pole zůstávají prázdná kvůli starším verzím mobilní aplikace
+    tasks, tasksOpen: openTasks.length, tests, marks: [], lunch: null,
   };
 }

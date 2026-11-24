@@ -412,14 +412,6 @@ export function AdminStats({ s }: { s: StatsData }) {
             <Tile value={s.system.diskFree != null ? bytes(s.system.diskFree) : "?"} label="volného místa" sub={s.system.diskTotal ? `z ${bytes(s.system.diskTotal)}` : undefined} />
           </div>
           <div className="sx-two">
-            <Card title="Bakaláři a synchronizace">
-              <ul className="sx-kv">
-                <li><span>Škol s Bakaláři od startu</span><b>{num(s.system.bakalari.schools)}</b></li>
-                <li><span>Právě nedostupných</span><b>{num(s.system.bakalari.down)}</b></li>
-                <li><span>Povedených / selhaných požadavků</span><b>{num(s.system.bakalari.ok)} / {num(s.system.bakalari.fail)}</b></li>
-                <li><span>Poslední synchronizace</span><b>{s.system.sync.lastEnd ? `${Math.max(1, Math.round(s.system.sync.durationMs / 1000))} s, ${s.system.sync.users} uživatelů, ${s.system.sync.failed} chyb` : "zatím neproběhla"}</b></li>
-              </ul>
-            </Card>
             <Card title="Zprávy a provoz">
               <ul className="sx-kv">
                 <li><span>Zpráv ve zvonečku</span><b>{num(s.system.messages.total)} ({pct(s.system.messages.read, s.system.messages.total)} přečteno)</b></li>

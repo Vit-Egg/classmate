@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { crossSite } from "@/lib/origin";
-import { analyticsConfig } from "@/lib/analytics";
-import { buildCsp } from "@/lib/csp";
 
 /**
  * Obrana proti CSRF pro všechny požadavky, které něco mění (POST, PUT, PATCH, DELETE): musí přijít ze stejného původu.
@@ -13,13 +11,7 @@ import { buildCsp } from "@/lib/csp";
  */
 const EXEMPT = [/^\/api\/pokladna\/stripe\//, /^\/oauth\/(token|register|revoke)$/, /^\/mcp$/, /^\/api\/v1(\/|$)/];
 
-/** Když je zapnutá vlastní statistika, hlavička CSP se skládá za běhu z .env (adresa Umami není v době sestavení obrazu známá). */
-function next() {
-  const res = NextResponse.next();
-  const a = process.env.NODE_ENV === "production" ? analyticsConfig() : null;
-  if (a) res.headers.set("Content-Security-Policy", buildCsp(a.origin));
-  return res;
-}
+const next = () => NextResponse.next();
 
 export function middleware(req: NextRequest) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method) || EXEMPT.some((r) => r.test(req.nextUrl.pathname))) return next();

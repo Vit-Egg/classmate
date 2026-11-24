@@ -1,10 +1,8 @@
 import { FeedbackDialog } from "@/components/FeedbackDialog";
-import { stravaAccount } from "@/lib/strava";
 import { aiEnabled } from "@/lib/ai";
 import { get } from "@/lib/db";
 import { EggGame } from "@/components/EggGame";
 import { ImageLightbox } from "@/components/ImageLightbox";
-import { MarksConsent } from "@/components/MarksConsent";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Shortcuts } from "@/components/Shortcuts";
 import { NavProgress } from "@/components/NavProgress";
@@ -15,7 +13,6 @@ import { FullscreenBell } from "@/components/FullscreenBell";
 import { RecorderBar } from "@/components/RecorderBar";
 import { RecordPrompt } from "@/components/RecordPrompt";
 import { Sidebar } from "@/components/Sidebar";
-import { DemoBanner } from "@/components/DemoBanner";
 import { subjectHues } from "@/lib/content";
 import { pragueNow } from "@/lib/dates";
 import { buildSlots } from "@/lib/schedule";
@@ -23,7 +20,6 @@ import { resolveKeys } from "@/lib/shortcuts";
 import { mailConfigured } from "@/lib/mail";
 import { requireUser, touchActive } from "@/lib/session";
 import { redirect } from "next/navigation";
-import { unreadKomens } from "@/lib/komens";
 import { avatarUrl, avatarVersion } from "@/lib/avatar";
 import { unreadCount } from "@/lib/messages";
 import { newPosts } from "@/lib/board";
@@ -44,8 +40,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const training = trainingActive(user);
   return (
     <div className="shell">
-      <Sidebar me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={user.role === "admin"} slots={slots} unread={unreadCount(user.id)} komens={unreadKomens(user.id)} lunch={!!stravaAccount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (user.role === "admin" && anyCash())} training={training} />
-      <main className="main">{user.demo ? <DemoBanner expiresAt={user.demo_expires_at} /> : null}{children}</main>
+      <Sidebar me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={user.role === "admin"} slots={slots} unread={unreadCount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (user.role === "admin" && anyCash())} training={training} />
+      <main className="main">{children}</main>
       <AppBridge signedIn />
       <NavProgress />
       <ImageLightbox />
@@ -57,8 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <EggGame />
       {!user.demo && <FeedbackDialog />}
       <Shortcuts isAdmin={user.role === "admin"} keys={keys} />
-      {user.share_marks_stats == null && <MarksConsent />}
-      <CommandPalette isAdmin={user.role === "admin"} keys={keys} lunch={!!stravaAccount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} cash={!!user.cash_enabled} training={training} />
+      <CommandPalette isAdmin={user.role === "admin"} keys={keys} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} cash={!!user.cash_enabled} training={training} />
     </div>
   );
 }

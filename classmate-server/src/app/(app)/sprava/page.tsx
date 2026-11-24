@@ -7,12 +7,11 @@ import { setTreasurer } from "@/app/actions/pokladna";
 import { methods, qrSettings, stripeStatus } from "@/lib/cash";
 import { AiSettingsForm } from "@/components/AiSettingsForm";
 import { getAiConfig } from "@/lib/ai-config";
-import { SchoolMailForm, SchoolMicrosoftForm } from "@/components/SchoolMailForms";
 import { SchoolTrainingForm } from "@/components/TrainingForms";
 import { removeUserAvatar } from "@/app/actions/avatar";
 import { Avatar } from "@/components/Avatar";
 import { avatarVersion } from "@/lib/avatar";
-import { cancelAnnouncementAction, addClass, createSchool, updateSchoolAnyClass, renameUser, setRoster, setUserPassword, deleteClass, deleteSchool, clearUserSocials, disconnectUserBakalari, moveUser, renameClass, resetUserTotp, signOutUser, toggleAdmin, updateSchool } from "@/app/actions/admin";
+import { cancelAnnouncementAction, createInviteAction, addClass, createSchool, renameUser, setRoster, setUserPassword, deleteClass, deleteSchool, clearUserSocials, moveUser, renameClass, resetUserTotp, signOutUser, toggleAdmin, updateSchool } from "@/app/actions/admin";
 import { LiveSearch } from "@/components/LiveSearch";
 import { PopoverMenu } from "@/components/PopoverMenu";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
@@ -22,6 +21,8 @@ import { parseRoster } from "@/lib/roster";
 import { instanceStatus, operator } from "@/lib/instance";
 import { configuredUrl } from "@/lib/site";
 import { requireAdmin } from "@/lib/session";
+import { INVITE_DAYS, pendingInvites } from "@/lib/invites";
+import { CopyField } from "@/components/CopyField";
 import { listAnnouncements } from "@/lib/announce";
 import { mailConfigured } from "@/lib/mail";
 import { STARTED, versionTitle } from "@/lib/version";
@@ -39,9 +40,13 @@ type UserRow = {
 
 const Popover = PopoverMenu;
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string; pozvanka?: string; pro?: string; chyba?: string }> }) {
   const me = await requireAdmin();
-  const q = ((await searchParams).q ?? "").trim().toLowerCase();
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const invites = pendingInvites();
+  const invitedName = sp.pro ? get<{ name: string }>("SELECT name FROM users WHERE id = ?", Number(sp.pro))?.name : undefined;
+  const inviteLink = sp.pozvanka ? `${siteUrl() ?? ""}/registrace?kod=${encodeURIComponent(sp.pozvanka)}` : null;
   const counts = get<{ u: number; s: number; c: number }>("SELECT (SELECT COUNT(*) FROM users WHERE placeholder = 0 AND demo = 0) u, (SELECT COUNT(*) FROM schools WHERE demo = 0) s, (SELECT COUNT(*) FROM classes WHERE school_id IN (SELECT id FROM schools WHERE demo = 0)) c")!;
   const schools = all<School>("SELECT s.id, s.name, s.bakalari_url, s.any_class, s.mail_kind, s.ms_domain, s.ms_enabled, s.training_enabled, s.mail_domain, s.mail_imap_host, s.mail_imap_port, s.mail_smtp_host, s.mail_smtp_port, (SELECT COUNT(*) FROM users WHERE school_id = s.id) users FROM schools s WHERE s.demo = 0 ORDER BY s.name");
   const classes = all<Cls>("SELECT c.id, c.school_id, c.name, c.cash_enabled, c.duty_enabled, c.board_enabled, c.roster, (SELECT COUNT(*) FROM users WHERE class_id = c.id AND placeholder = 0) users, (SELECT COUNT(*) FROM users WHERE class_id = c.id AND placeholder = 0) registered FROM classes c WHERE c.school_id IN (SELECT id FROM schools WHERE demo = 0) ORDER BY c.name");
@@ -69,13 +74,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <p className="subtitle">Uživatelé, školy a třídy · {versionTitle()} · běží od {fmtDateTime(STARTED)}</p>
         </div>
         <div className="btn-row">
+        <Link href="/sprava/rozvrh" className="btn primary">Rozvrh třídy</Link>
         <Link href="/sprava/statistiky" className="btn">Statistiky</Link>
         <Link href="/sprava/audit" className="btn">Audit log</Link>
         <AnnounceDialog classes={classes.map((c) => ({ id: c.id, name: `${schools.find((x) => x.id === c.school_id)?.name ?? ""} · ${c.name}`, users: c.users }))} users={allUsers} mailOn={mailConfigured()} />
         <Popover label="Nová škola" small={false}>
           <ActionForm action={createSchool}>
             <label className="field"><span>Název</span><input className="input" name="name" required /></label>
-            <label className="field"><span>Adresa Bakalářů</span><input className="input" name="url" placeholder="https://bakalari.priklad.cz" /></label>
             <Submit>Přidat</Submit>
           </ActionForm>
         </Popover>
@@ -148,29 +153,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <ActionForm action={updateSchool}>
                       <input type="hidden" name="id" value={s.id} />
                       <label className="field"><span>Název</span><input className="input" name="name" defaultValue={s.name} required /></label>
-                      <label className="field"><span>Adresa Bakalářů</span><input className="input" name="url" defaultValue={s.bakalari_url ?? ""} /></label>
                       <Submit>Uložit</Submit>
                     </ActionForm>
-                  </Popover>
-                  <Popover label="Pošta">
-                    <SchoolMailForm id={s.id} msEnabled={!!s.ms_enabled && !!s.ms_domain} d={{ kind: s.mail_kind ?? "", domain: s.mail_domain ?? "", imapHost: s.mail_imap_host ?? "", imapPort: s.mail_imap_port ? String(s.mail_imap_port) : "", smtpHost: s.mail_smtp_host ?? "", smtpPort: s.mail_smtp_port ? String(s.mail_smtp_port) : "" }} />
-                  </Popover>
-                  <Popover label="Microsoft 365">
-                    <SchoolMicrosoftForm id={s.id} enabled={!!s.ms_enabled} domain={s.ms_domain ?? ""} clientId={process.env.MS_CLIENT_ID?.trim() ?? ""} redirectUri={siteUrl() ? `${siteUrl()}/komunikace/pripojit/microsoft/callback` : ""} />
                   </Popover>
                   <Popover label="Moduly školy">
                     <SchoolTrainingForm schoolId={s.id} enabled={!!s.training_enabled} />
-                  </Popover>
-                  <Popover label="Registrace tříd">
-                    <ActionForm action={updateSchoolAnyClass} resetOnSuccess={false}>
-                      <input type="hidden" name="id" value={s.id} />
-                      <label className="check-row" style={{ alignItems: "flex-start" }}>
-                        <input type="checkbox" name="any" value="1" defaultChecked={!!s.any_class} style={{ marginTop: 2 }} />
-                        <span>Povolit studenty <b>všech tříd</b> z Bakalářů této školy</span>
-                      </label>
-                      <p className="hint" style={{ margin: 0 }}>Jméno i třídu bere aplikace vždy z Bakalářů, student si je nevybírá. Zapnuto: třída, která v aplikaci ještě není, se při první registraci sama založí. Vypnuto: zaregistrovat se dá jen student třídy, kterou jsi ve škole přidal tlačítkem Přidat třídu (seznam povolených tříd).</p>
-                      <Submit>Uložit</Submit>
-                    </ActionForm>
                   </Popover>
                   <Popover label="Přidat třídu">
                     <ActionForm action={addClass}>
@@ -184,7 +171,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   )}
                 </div>
               </div>
-              <p className="hint" style={{ margin: "0 4px" }}>Třídy: {s.any_class ? "všechny z Bakalářů" : "jen povolené (níže)"} · Bakaláři: {s.bakalari_url ?? "nenastaveno"} {s.ms_enabled && s.ms_domain ? ` · Microsoft 365: @${s.ms_domain}` : ""}{s.mail_kind === "microsoft" ? " · pošta: Microsoft 365" : s.mail_kind === "imap" ? ` · pošta: IMAP (@${s.mail_domain})` : ""} · {s.users} {plural(s.users, "uživatel", "uživatelé", "uživatelů")}</p>
+              <p className="hint" style={{ margin: "0 4px" }}>{s.users} {plural(s.users, "uživatel", "uživatelé", "uživatelů")}</p>
               {classes.filter((c) => c.school_id === s.id).map((c) => (
                 <div key={c.id} className="card user-row class-row">
                   <div><div className="name">{c.name}</div><div className="meta">{c.registered} {plural(c.registered, "uživatel", "uživatelé", "uživatelů")} v aplikaci · {parseRoster(c.roster).length ? `${parseRoster(c.roster).length} ${plural(parseRoster(c.roster).length, "jméno", "jména", "jmen")} v seznamu` : "prázdný seznam: přijímá všechny"}</div></div>
@@ -215,7 +202,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="hr-section" style={{ marginTop: 32 }}>
-        <h2 className="group-title" style={{ marginBottom: 18 }}>Uživatelé</h2>
+        <h2 className="group-title" id="clenove" style={{ marginBottom: 18 }}>Uživatelé</h2>
+        {sp.chyba && <p className="msg-error" role="alert">{sp.chyba}</p>}
+        {inviteLink && (
+          <div className="card card-pad" style={{ marginBottom: 16 }}>
+            <p style={{ margin: "0 0 10px" }}><b>Pozvánka{invitedName ? ` pro ${invitedName}` : ""}</b> je připravená. Pošli odkaz jen tomu člověku (platí {INVITE_DAYS} dní a jde použít jednou):</p>
+            <CopyField value={inviteLink} />
+          </div>
+        )}
         <div style={{ marginBottom: 14 }}><LiveSearch initial={q} placeholder="Hledat uživatele (jméno, e-mail, třída)…" label="Hledat uživatele" /></div>
         {[users.filter((u) => !u.placeholder), users.filter((u) => u.placeholder)].map((list, gi) => list.length > 0 && (
         <div key={gi}>
@@ -233,9 +227,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   {u.totp_enabled ? <span className="badge">2FA</span> : null}
                   {u.id === me.id && <span className="badge">ty</span>}
                 </div>
-                <div className="meta">{!u.placeholder && <span>{u.email}</span>}<span>{u.school_name}{" · "}{u.class_name}</span>{u.last_sync_at && <span>Synchronizace: {fmtDateTime(u.last_sync_at)}</span>}{!u.bakalari_refresh_enc && !u.placeholder && <span style={{ color: "var(--warn)" }}>Bakaláři odpojeny</span>}</div>
+                <div className="meta">{!u.placeholder && <span>{u.email}</span>}<span>{u.school_name}{" · "}{u.class_name}</span></div>
                 <div className="meta">{!u.placeholder && <span>V aplikaci naposledy: {u.last_active_at ? fmtDateTime(u.last_active_at) : "zatím ne"}</span>}{!u.placeholder && <span>aktivních přihlášení: {u.sessions}</span>}{u.since && <span>od {fmtDate(u.since)}</span>}</div>
               </div>
+              {!!u.placeholder && (
+                <div className="user-actions">
+                  <form action={createInviteAction}><input type="hidden" name="user" value={u.id} /><button className="btn small primary">{invites.has(u.id) ? "Nová pozvánka" : "Pozvat"}</button></form>
+                  {invites.has(u.id) && <small className="hint">pozvánka platí do {fmtDate(invites.get(u.id)!)}</small>}
+                </div>
+              )}
               {!u.placeholder && (
                 <div className="user-actions">
                   <Popover label="Přesunout">
@@ -266,7 +266,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <div className="pop-list">
                       <form action={signOutUser}><input type="hidden" name="user" value={u.id} /><button className="btn small">Odhlásit ze všech zařízení</button></form>
                       {u.totp_enabled ? <form action={resetUserTotp}><input type="hidden" name="user" value={u.id} /><ConfirmButton className="btn small" message={`Vypnout 2FA uživateli ${u.name}?`}>Vypnout 2FA</ConfirmButton></form> : null}
-                      {u.bakalari_refresh_enc && <form action={disconnectUserBakalari}><input type="hidden" name="user" value={u.id} /><ConfirmButton className="btn small" message="Odpojit Bakaláře?">Odpojit Bakaláře</ConfirmButton></form>}
                       {u.socials && u.socials !== "{}" && <form action={clearUserSocials}><input type="hidden" name="user" value={u.id} /><ConfirmButton className="btn small" message={`Smazat kontakty uživatele ${u.name}?`}>Smazat kontakty</ConfirmButton></form>}
                       {avatarVersion(u.id) != null && <form action={removeUserAvatar}><input type="hidden" name="user" value={u.id} /><ConfirmButton className="btn small" message={`Smazat profilovku uživatele ${u.name}?`}>Smazat profilovku</ConfirmButton></form>}
                       {(!!u.cash_enabled || !!u.treasurer) && !u.placeholder && <form action={setTreasurer}><input type="hidden" name="user" value={u.id} /><input type="hidden" name="on" value={u.treasurer ? "0" : "1"} /><button className="btn small">{u.treasurer ? "Odebrat pokladníka" : "Jmenovat pokladníkem"}</button></form>}

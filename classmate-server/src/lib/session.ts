@@ -103,7 +103,7 @@ export function touchActive(userId: number, demo = false) {
 
 export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user) redirect("/prihlaseni");
+  if (!user) redirect("/");
   return user;
 }
 

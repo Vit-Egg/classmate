@@ -1,15 +1,12 @@
 import { NowLine } from "@/components/NowLine";
 import Link from "next/link";
 import { startTimes } from "@/lib/starttime";
-import { Fragment, Suspense } from "react";
+import { Fragment } from "react";
 import { TodayCustomize } from "@/components/TodayCustomize";
 import { getPref } from "@/lib/prefs";
 import { parseLayout } from "@/lib/today";
 import { Clamp } from "@/components/Clamp";
 import { DutyWidget } from "@/components/DutyWidget";
-import { LunchWidget, LunchSkeleton } from "@/components/LunchWidget";
-import { stravaAccount } from "@/lib/strava";
-import { SyncNotice } from "@/components/SyncNotice";
 import { DayLine, DayRuler } from "@/components/Live";
 import { TaskCheck } from "@/components/TaskCheck";
 import { buildSlots, dayState } from "@/lib/schedule";
@@ -21,18 +18,15 @@ import { monthShort, addDays, dayName, dayShort, diffDays, dowOf, mondayOf, fmtD
 import { nextSchoolDay } from "@/lib/nextday";
 import { isSelfStudy } from "@/lib/selfstudy";
 import { requireUser } from "@/lib/session";
-import { getAbsence, getMarks, getTimetable } from "@/lib/sync";
+import { getTimetable } from "@/lib/sync";
 import { createNote } from "@/app/actions/notes";
 import { openMessage } from "@/app/actions/messages";
 import { all } from "@/lib/db";
 import { calendarEvents } from "@/lib/calendar";
 import { kc, myPayments } from "@/lib/cash";
-import { getKomens } from "@/lib/komens";
 import { listMessages } from "@/lib/messages";
-import { absenceHours } from "@/lib/types";
 import { celebrates, nameDayNames } from "@/lib/namedays";
 import { classmates } from "@/lib/classmates";
-import { namedAbsence } from "@/lib/normalize";
 import { lessonItemsBetween, itemsForLesson } from "@/lib/lessonitems-data";
 import { LessonTags } from "@/components/LessonTags";
 
@@ -59,12 +53,6 @@ export default async function TodayPage() {
   const next = free ? nextSchoolDay(now.date, [{ monday: mondayOf(now.date), data: result.data }, { monday: addDays(mondayOf(now.date), 7), data: nextWeek?.data }]) : null;
   const untilNext = next ? diffDays(now.date, next.date) * 1440 - now.minutes + (next.begin ? toMin(next.begin) : 480) : 0;
   const reason = now.dow > 5 ? (now.dow === 6 ? "sobota" : "neděle") : allDay || "den bez výuky";
-  const lunch = !!stravaAccount(user.id);
-  const lunchBox = lunch && (
-    <Suspense fallback={<LunchSkeleton />}>
-      <LunchWidget userId={user.id} today={now.date} hour={now.hour} />
-    </Suspense>
-  );
   const startAt = startTimes(user);
   const tasks = listTasks(user.id, user.class_id, false).slice(0, 5);
   const tests = listTests(user.id, user.class_id, now.date, addDays(now.date, 21)).filter((t) => !t.makeup || t.attend === 1).slice(0, 4);
@@ -164,7 +152,7 @@ export default async function TodayPage() {
               })}
             </div>
           ) : (
-            <div className="empty">Rozvrh se nepodařilo načíst.</div>
+            <div className="empty">Rozvrh zatím není zadaný.</div>
           )}
         </section>
         );
@@ -224,7 +212,6 @@ export default async function TodayPage() {
   const layout = parseLayout(getPref(user, "today_layout"));
   // doplňkové panely se sestavují jen tehdy, když je má uživatel zapnuté (nic navíc se nenačítá)
   const on = (id: string) => layout.find((x) => x.id === id)?.col !== "h";
-  const bk = !!user.bakalari_refresh_enc;
   const box = (title: string, href: string | null, label: string, body: React.ReactNode) => (
     <section>
       <div className="section-head">
@@ -266,45 +253,9 @@ export default async function TodayPage() {
           );
         })}
       </div>
-    ) : <div className="empty">{tt ? "Bez hodin." : "Rozvrh se nepodařilo načíst."}</div>);
+    ) : <div className="empty">{tt ? "Bez hodin." : "Rozvrh zatím není zadaný."}</div>);
   }
 
-  let marksEl: React.ReactNode = null;
-  if (on("z") && bk) {
-    const list = ((await getMarks(user)).data?.subjects ?? []).flatMap((s) => s.marks).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-    marksEl = box("Poslední známky", "/znamky", "Vše →", list.length ? (
-      <div className="card rows">
-        {list.map((m) => (
-          <Link key={m.id} href="/znamky" className="item">
-            <div className="date-badge"><b>{m.text}</b></div>
-            <div className="item-main">
-              <div className="item-title">{m.subject}</div>
-              <div className="item-meta"><span>{[m.caption || m.theme, m.weight ? `váha ${m.weight}` : "", fmtShort(m.date)].filter(Boolean).join(" · ")}</span></div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    ) : <div className="empty">Zatím žádné známky.</div>);
-  }
-
-  let absenceEl: React.ReactNode = null;
-  if (on("a") && bk) {
-    const d = (await getAbsence(user)).data;
-    if (d) {
-      const own = Number(getPref(user, "abs_limit")) || 0;
-      const limit = own || Math.round(d.threshold * 100);
-      const hoursTotal = d.days.reduce((a, x) => a + absenceHours(x), 0);
-      const named = namedAbsence(d.subjects);
-      const lessons = named.reduce((a, s) => a + s.lessons, 0);
-      const ratio = lessons ? named.reduce((a, s) => a + s.missed, 0) / lessons : 0;
-      absenceEl = box("Absence", "/absence", "Vše →", (
-        <div className="stats auto">
-          <div className="card stat"><b>{hoursTotal}</b><span>zameškaných {plural(hoursTotal, "hodina", "hodiny", "hodin")}</span></div>
-          <div className={`card stat${ratio * 100 >= limit ? " alert" : ""}`}><b>{Math.round(ratio * 1000) / 10} %</b><span>limit {limit} %</span></div>
-        </div>
-      ));
-    }
-  }
 
   let calEl: React.ReactNode = null;
   if (on("c")) {
@@ -368,22 +319,6 @@ export default async function TodayPage() {
     ) : <div className="empty">Žádné zprávy.</div>);
   }
 
-  let komensEl: React.ReactNode = null;
-  if (on("q") && bk) {
-    const list = ((await getKomens(user, "received")).data ?? []).filter((m) => !m.read).slice(0, 4);
-    komensEl = box("Komens", "/komunikace", "Vše →", list.length ? (
-      <div className="card rows">
-        {list.map((m) => (
-          <Link key={m.id} href={`/komunikace?t=komens&m=${encodeURIComponent(m.id)}`} className="item">
-            <div className="item-main">
-              <div className="item-title">{m.title}</div>
-              <div className="item-meta"><span>{m.sender}</span></div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    ) : <div className="empty">Žádné nepřečtené zprávy.</div>);
-  }
 
   let cashEl: React.ReactNode = null;
   if (on("m") && user.cash_enabled) {
@@ -430,8 +365,8 @@ export default async function TodayPage() {
     </div>
   )) : null;
 
-  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: afterSchool && tomorrowEl ? tomorrowEl : scheduleEl, o: lunchBox || null, d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, z: marksEl, a: absenceEl, c: calEl, p: notesEl, u: messagesEl, q: komensEl, m: cashEl, b: quickEl };
-  const available = ["r", "s", ...(lunch ? ["o"] : []), ...(user.duty_enabled ? ["d"] : []), "t", "k", "y", ...(bk ? ["z", "a", "q"] : []), "c", "p", "u", ...(user.cash_enabled ? ["m"] : []), "b", "x"];
+  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: afterSchool && tomorrowEl ? tomorrowEl : scheduleEl, d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, c: calEl, p: notesEl, u: messagesEl, m: cashEl, b: quickEl };
+  const available = ["r", "s", ...(user.duty_enabled ? ["d"] : []), "t", "k", "y", "c", "p", "u", ...(user.cash_enabled ? ["m"] : []), "b", "x"];
   const col = (c: "l" | "r") => layout.filter((x) => x.col === c && widgets[x.id]).map((x) => <Fragment key={x.id}>{widgets[x.id]}</Fragment>);
   const showRuler = layout.find((x) => x.id === "r")?.col !== "h";
   const hasRight = layout.some((x) => x.col === "r" && widgets[x.id]);
@@ -464,7 +399,6 @@ export default async function TodayPage() {
       {showRuler && <DayLine slots={slots} />}
       {showRuler && <DayRuler slots={slots} />}
       <div className="today-tools"><TodayCustomize initial={layout} available={available} /></div>
-      <SyncNotice result={result} />
       <div className="grid-2" style={hasLeft && hasRight ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}>
         {hasLeft && <div className="stack-lg">
           {col("l")}

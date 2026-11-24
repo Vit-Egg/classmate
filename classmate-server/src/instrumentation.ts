@@ -1,12 +1,9 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { startBackgroundSync, startEmailWorker, startTodoistWorker, startTrashCleanup } = await import("./lib/background");
-    const { ensureDemoAccount } = await import("./lib/demo");
-    ensureDemoAccount();
+    const { startEmailWorker, startTodoistWorker, startTrashCleanup } = await import("./lib/background");
     // Čerstvý server: kód pro průvodce prvním spuštěním se vypíše do logu (bez něj by správcem mohl být kdokoli, kdo adresu otevře dřív)
     const { needsSetup, setupToken, setupTokenFromEnv } = await import("./lib/setup");
     if (needsSetup() && !setupTokenFromEnv()) console.log(`\nInstalační kód pro první spuštění (průvodce na /zprovozneni):\n${setupToken()}\n`);
-    startBackgroundSync();
     startEmailWorker();
     startTodoistWorker();
     startTrashCleanup();

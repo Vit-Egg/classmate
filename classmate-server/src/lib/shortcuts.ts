@@ -9,8 +9,6 @@ export const SHORTCUTS: { id: ShortcutId; label: string; key: string; href?: str
   { id: "testy", label: "Testy a zkoušení", key: "t", href: "/testy-a-zkouseni" },
   { id: "predmety", label: "Předměty", key: "e", href: "/predmety" },
   { id: "poznamky", label: "Poznámky", key: "p", href: "/poznamky" },
-  { id: "znamky", label: "Známky", key: "z", href: "/znamky" },
-  { id: "absence", label: "Absence", key: "a", href: "/absence" },
   { id: "sprava", label: "Správa", key: "s", href: "/sprava", admin: true },
   { id: "nastaveni", label: "Nastavení", key: ",", href: "/nastaveni" },
   { id: "zpravy", label: "Zprávy (zvoneček)", key: "m" },

@@ -6,6 +6,6 @@ export const metadata = { title: "První spuštění" };
 export const dynamic = "force-dynamic";
 
 export default function SetupPage() {
-  if (!needsSetup()) redirect("/prihlaseni");
+  if (!needsSetup()) redirect("/");
   return <SetupForm fromEnv={setupTokenFromEnv()} />;
 }

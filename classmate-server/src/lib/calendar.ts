@@ -4,11 +4,10 @@ import { isSelfStudy, roomText } from "./selfstudy";
 import { credit } from "./credit";
 import { addDays, dayName, mondayOf, pragueNow } from "./dates";
 import { listTests, tasksDue } from "./content";
-import { getAbsence, getMarks, getTimetable, getTimetableWeek } from "./sync";
-import { absenceHours } from "./types";
+import { getTimetable, getTimetableWeek } from "./sync";
 import type { User } from "./session";
 
-export type CalKind = "test" | "task" | "change" | "event" | "other" | "mark" | "absence";
+export type CalKind = "test" | "task" | "change" | "event" | "other";
 export type CalEvent = { /** id vlastní události (jen u druhu „other“) */ id?: number; /** smí ji přihlášený upravit (autor nebo správce) */ editable?: boolean; note?: string; start?: string; end?: string; date: string; kind: CalKind; title: string; sub?: string; href: string; time?: string; done?: boolean; cancelled?: boolean; /** už proběhlo (zobrazí se vyšedle) */ past?: boolean };
 
 export const KINDS: { id: CalKind; label: string }[] = [
@@ -17,11 +16,9 @@ export const KINDS: { id: CalKind; label: string }[] = [
   { id: "change", label: "Změny v rozvrhu" },
   { id: "event", label: "Události a svátky" },
   { id: "other", label: "Ostatní" },
-  { id: "mark", label: "Známky" },
-  { id: "absence", label: "Absence" },
 ];
 export const ALL_KINDS = KINDS.map((k) => k.id);
-const ORDER: Record<CalKind, number> = { event: 0, test: 1, change: 2, other: 3, task: 4, absence: 5, mark: 6 };
+const ORDER: Record<CalKind, number> = { event: 0, test: 1, change: 2, other: 3, task: 4 };
 
 /** Z Bakalářů se stahují jen týdny v rozumném okolí dneška (každý týden je jeden dotaz, výsledky se cachují). */
 const PAST_DAYS = 70;
@@ -98,16 +95,6 @@ export async function calendarEvents(user: User, from: string, to: string, kinds
       });
   }
 
-  if (kinds.has("mark")) {
-    const r = await getMarks(user);
-    if (!r.data) partial = true;
-    for (const s of r.data?.subjects ?? []) for (const m of s.marks) if (m.date >= from && m.date <= to) out.push({ date: m.date, kind: "mark", title: `${s.name}: ${m.text}`, sub: `${m.caption}${m.weight ? ` · váha ${m.weight}` : ""}`, href: "/znamky" });
-  }
-  if (kinds.has("absence")) {
-    const r = await getAbsence(user);
-    if (!r.data) partial = true;
-    for (const d of r.data?.days ?? []) if (d.date >= from && d.date <= to) out.push({ date: d.date, kind: "absence", title: absenceHours(d) ? `Absence · ${absenceHours(d)} hod.` : "Absence", sub: [d.excused ? `omluveno ${d.excused}` : "", d.unsolved ? `nevyřízeno ${d.unsolved}` : "", d.late ? `pozdě ${d.late}` : "", d.soon ? `odchod ${d.soon}` : ""].filter(Boolean).join(" · ") || undefined, href: "/absence" });
-  }
 
   out.sort((a, b) => a.date.localeCompare(b.date) || ORDER[a.kind] - ORDER[b.kind] || (a.time ?? "").localeCompare(b.time ?? "") || a.title.localeCompare(b.title, "cs"));
   return { events: out, partial };

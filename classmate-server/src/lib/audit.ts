@@ -16,6 +16,8 @@ export const AUDIT_ACTIONS = {
   login_2fa_failed: { label: "Špatný kód dvoufázového ověření", cat: "ucet" },
   logout: { label: "Odhlášení", cat: "ucet" },
   register: { label: "Nová registrace", cat: "ucet" },
+  invite_create: { label: "Pozvánka do třídy", cat: "sprava" },
+  timetable_save: { label: "Úprava rozvrhu", cat: "sprava" },
   register_blocked: { label: "Registrace nešla dokončit (třída nebo jméno chybí)", cat: "ucet" },
   password_reset: { label: "Heslo obnoveno odkazem z e-mailu", cat: "ucet" },
   email_change: { label: "Změna e-mailu", cat: "ucet" },

@@ -12,10 +12,8 @@ import { decrypt, encrypt, verifyPasswordAsync } from "@/lib/crypto";
 import { destroySession, requireUser } from "@/lib/session";
 import { generateSecret, verifyTotp } from "@/lib/totp";
 import { generateRecoveryCodes } from "@/lib/twofa";
-import { BakalariError, bkGet, bkLogin } from "@/lib/bakalari";
-import { rememberTokens, syncAll } from "@/lib/sync";
-import { contributeFromCache, withdrawMarks } from "@/lib/stats";
 import { ServiceError, setNoteTitleTemplate as svcTitle, setShortcuts as svcShortcuts } from "@/lib/services";
+import { withdrawMarks } from "@/lib/stats";
 import { purgeUserAudio } from "@/lib/audio";
 import { purgeUserImages } from "@/lib/images";
 import { purgeUserFiles } from "@/lib/note-files";
@@ -35,43 +33,6 @@ export async function revokeConnection(fd: FormData): Promise<void> {
   const user = await requireUser();
   run("DELETE FROM oauth_tokens WHERE id = ? AND user_id = ?", Number(fd.get("id")), user.id);
   revalidatePath("/nastaveni");
-}
-
-export async function syncNow(): Promise<void> {
-  const user = await requireUser();
-  await syncAll(user, true);
-  revalidatePath("/", "layout");
-}
-
-export async function connectBakalari(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireUser();
-  const blocked = demoBlocked(user);
-  if (blocked) return blocked;
-  const username = String(fd.get("bkUser") ?? "").trim();
-  const password = String(fd.get("bkPass") ?? "");
-  if (!user.bakalari_url) return { error: "Tvoje škola nemá nastavené Bakaláře." };
-  if (!username || !password) return { error: "Vyplň jméno i heslo do Bakalářů." };
-  if (!rateLimit(`bkconnect:${user.id}`, 10, 3600) || !rateLimit(`bkconnect:name:${user.school_id}:${username.toLowerCase()}`, 5, 3600)) return { error: "Moc pokusů, zkus to za chvíli." };
-  const taken = get<{ id: number }>("SELECT id FROM users WHERE school_id = ? AND bakalari_username = ? AND id != ?", user.school_id, username, user.id);
-  if (taken) return { error: "Tento účet z Bakalářů už používá někdo jiný." };
-  try {
-    const t = await bkLogin(user.bakalari_url, username, password);
-    const abbrev = (await bkGet<{ Class?: { Abbrev?: string } }>(user.bakalari_url, t.access_token, "/api/3/user")).Class?.Abbrev;
-    // do jiné třídy tě přesune jen správce (třídy mají seznamy studentů)
-    if (abbrev && abbrev.replace(/\s+/g, "").toLowerCase() !== user.class_name.replace(/\s+/g, "").toLowerCase()) return { error: `Tenhle účet z Bakalářů je ze třídy ${abbrev}, ty jsi v aplikaci ve třídě ${user.class_name}. Přesun do jiné třídy dělá správce.` };
-    const classId = user.class_id;
-    run("UPDATE users SET bakalari_username = ?, bakalari_refresh_enc = ? WHERE id = ?", username, encrypt(t.refresh_token), user.id);
-    run("DELETE FROM cache WHERE user_id = ?", user.id);
-    rememberTokens(user.id, t.access_token, t.expires_in);
-    audit(user, "bakalari_connect");
-  } catch (e) {
-    if (e instanceof BakalariError) return { error: e.kind === "auth" ? "Jméno nebo heslo do Bakalářů nesedí." : e.message };
-    throw e;
-  }
-  const fresh = await requireUser();
-  await syncAll({ ...fresh, class_id: get<{ class_id: number }>("SELECT class_id FROM users WHERE id = ?", user.id)!.class_id }, true).catch(() => {});
-  revalidatePath("/", "layout");
-  return { ok: true, message: "Bakaláři jsou propojené." };
 }
 
 export async function changeEmail(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -151,7 +112,7 @@ export async function deleteAccount(_: ActionState, fd: FormData): Promise<Actio
   if (user.role === "admin" && get<{ n: number }>("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'")!.n === 1 && get<{ n: number }>("SELECT COUNT(*) AS n FROM users")!.n > 1) {
     return { error: "Jsi jediný správce. Nejdřív někoho dalšího jmenuj správcem." };
   }
-  withdrawMarks(user.id);
+  withdrawMarks(user.id); // staré anonymní příspěvky známek (z doby Bakalářů)
   purgeUserAudio(user.id);
   purgeUserImages(user.id);
   purgeUserFiles(user.id);
@@ -159,23 +120,12 @@ export async function deleteAccount(_: ActionState, fd: FormData): Promise<Actio
   run("DELETE FROM users WHERE id = ?", user.id);
   forgetUser(user.id); // z historie zmizí jméno a IP, zůstane jen to, co se kdy stalo
   await destroySession();
-  redirect("/prihlaseni");
+  redirect("/");
 }
 
 export async function qrFor(secretEnc: string, email: string) {
   const { otpauthUri } = await import("@/lib/totp");
   return QRCode.toDataURL(otpauthUri(decrypt(secretEnc), email), { margin: 1, width: 220 });
-}
-
-/** Souhlas / nesouhlas se sdílením známek do anonymních statistik (lze kdykoliv změnit). */
-export async function setMarksSharing(fd: FormData): Promise<void> {
-  const user = await requireUser();
-  if (user.demo) return;
-  const allow = fd.get("allow") === "1";
-  run("UPDATE users SET share_marks_stats = ? WHERE id = ?", allow ? 1 : 0, user.id);
-  if (allow) contributeFromCache(user);
-  else withdrawMarks(user.id); // odvolání souhlasu smaže všechny dosavadní příspěvky
-  revalidatePath("/", "layout");
 }
 
 /** Veřejné sdílení rozvrhu ve třídě (výchozí zapnuto): ukládá se jako volba účtu. */

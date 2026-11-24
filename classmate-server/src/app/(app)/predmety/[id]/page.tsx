@@ -2,7 +2,6 @@ import { credit } from "@/lib/credit";
 import { startTimes } from "@/lib/starttime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SyncNotice } from "@/components/SyncNotice";
 import { monthShort, dayName, dayShort, dowOf, fmtShort, hhmm, pragueNow, relativeDay } from "@/lib/dates";
 import { roomText } from "@/lib/selfstudy";
 import { requireUser } from "@/lib/session";
@@ -39,7 +38,6 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
           <p className="subtitle">{[d.teachers.join(", "), d.rooms.length ? `učebna ${d.rooms.join(", ")}` : "", d.selfStudyHours ? (d.selfStudyHours === d.slots.length ? "samostudium (můžeš být doma)" : `z toho ${d.selfStudyHours}× samostudium`) : "", d.slots.length ? `${d.slots.length}× týdně` : ""].filter(Boolean).join(" · ") || "Zatím bez rozvrhu"}</p>
         </div>
       </div>
-      {d.stale && <SyncNotice result={{ data: null, stale: true, error: "network" }} />}
 
       <div className="stat-row">
         <div className="stat"><small>Průměr</small><b>{d.average != null ? cs(d.average) : "–"}</b></div>

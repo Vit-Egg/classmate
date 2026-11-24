@@ -10,7 +10,6 @@ import { dataDir } from "./paths";
 import { diskFree, diskTotal } from "./disk";
 import { pragueNow } from "./dates";
 import { allBkStats, processStartedAt, syncStat } from "./metrics";
-import { activeDemos } from "./demo-visitor";
 
 const DAY = 86_400_000;
 const REAL_U = "(SELECT id FROM users WHERE placeholder = 0 AND demo = 0)";
@@ -243,7 +242,6 @@ export function adminStats() {
   const features = safe(() => {
     const c = (sql: string) => n(sql);
     const items: [string, string, number][] = [
-      ["Přihlášení", "Propojené Bakaláře", c(`SELECT COUNT(*) n FROM users WHERE ${U} AND bakalari_refresh_enc IS NOT NULL`)],
       ["Přihlášení", "Dvoufázové ověření", c(`SELECT COUNT(*) n FROM users WHERE ${U} AND totp_enabled = 1`)],
       ["Spolupráce", "Sdílí poznámky", c(`SELECT COUNT(*) n FROM users WHERE ${U} AND share_notes = 1`)],
       ["Spolupráce", "Sdílí známky do statistik třídy", c(`SELECT COUNT(*) n FROM users WHERE ${U} AND share_marks_stats = 1`)],
@@ -256,8 +254,6 @@ export function adminStats() {
       ["Upozornění", "Mobilní aplikace", c(`SELECT COUNT(DISTINCT user_id) n FROM app_devices WHERE user_id IN ${REAL_U}`)],
       ["Propojení", "Kalendář v jiné aplikaci", c(`SELECT COUNT(*) n FROM calendar_feeds WHERE user_id IN ${REAL_U}`)],
       ["Propojení", "Todoist", c(`SELECT COUNT(*) n FROM todoist_accounts WHERE user_id IN ${REAL_U}`)],
-      ["Propojení", "Školní e-mail (Komunikace)", c(`SELECT COUNT(*) n FROM mail_accounts WHERE user_id IN ${REAL_U}`)],
-      ["Propojení", "Strava.cz (obědy)", c(`SELECT COUNT(*) n FROM strava_accounts WHERE user_id IN ${REAL_U}`)],
       ["Propojení", "Intervals.icu", c(`SELECT COUNT(*) n FROM intervals_accounts WHERE user_id IN ${REAL_U}`)],
       ["Profil", "Profilová fotka", c(`SELECT COUNT(*) n FROM avatars WHERE user_id IN ${REAL_U}`)],
       ["Profil", "Kontakty", c(`SELECT COUNT(*) n FROM users WHERE ${U} AND socials IS NOT NULL AND socials NOT IN ('', '{}', '[]')`)],
@@ -316,7 +312,7 @@ export function adminStats() {
       diskFree: diskFree(),
       diskTotal: diskTotal(),
       migrations: n("SELECT COUNT(*) n FROM _migrations"),
-      demos: activeDemos(),
+      demos: 0,
       oauthClients: n("SELECT COUNT(*) n FROM oauth_clients"),
       audit: n("SELECT COUNT(*) n FROM audit_log"),
       inquiries: { total: n("SELECT COUNT(*) n FROM inquiries"), open: n("SELECT COUNT(*) n FROM inquiries WHERE handled_at IS NULL") },

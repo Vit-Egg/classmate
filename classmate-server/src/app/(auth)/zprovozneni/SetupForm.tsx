@@ -6,13 +6,13 @@ import { ActionForm, Submit } from "@/components/forms";
 
 export function SetupForm({ fromEnv }: { fromEnv: boolean }) {
   // hodnoty se drží ve stavu, ať se při chybě (špatná adresa, krátké heslo) nevymaže celý formulář
-  const [f, setF] = useState({ token: "", name: "", email: "", password: "", school: "", bakalari: "", class: "" });
+  const [f, setF] = useState({ token: "", name: "", email: "", password: "", school: "", class: "" });
   const bind = (k: keyof typeof f) => ({ name: k, value: f[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [k]: e.target.value })) });
   return (
     <>
       <h1 style={{ marginBottom: 6 }}>Vítej v Classmate</h1>
       <p className="subtitle" style={{ margin: "0 0 20px", fontSize: 15 }}>
-        Tenhle server je nový. Vytvoř účet správce a první školu, ostatní třídy a studenti se přidají sami při registraci.
+        Tenhle server je nový. Vytvoř účet správce, školu a svou třídu. Spolužáky pak pozveš ve Správě.
       </p>
       <ActionForm action={setupAction} resetOnSuccess={false}>
         <label className="field">
@@ -45,14 +45,9 @@ export function SetupForm({ fromEnv }: { fromEnv: boolean }) {
               <input className="input" {...bind("school")} placeholder="Gymnázium Příklad" required />
             </label>
             <label className="field">
-              <span>Adresa Bakalářů</span>
-              <input className="input" {...bind("bakalari")} placeholder="https://bakalari.priklad.cz" inputMode="url" />
-              <p className="hint">Bez ní se nikdo nezaregistruje. Jde doplnit později ve Správě.</p>
-            </label>
-            <label className="field">
               <span>Tvoje třída</span>
-              <input className="input" {...bind("class")} placeholder="3.A, nebo Správci" required />
-              <p className="hint">Účet musí patřit nějaké třídě. Ostatní třídy se vytvoří samy podle Bakalářů.</p>
+              <input className="input" {...bind("class")} placeholder="3.A" required />
+              <p className="hint">Classmate je pro jednu třídu. Spolužáky pak pozveš ve Správě.</p>
             </label>
           </div>
         </fieldset>

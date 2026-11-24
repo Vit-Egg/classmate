@@ -1,21 +1,18 @@
 /**
- * Zprávy: oznámení o změnách. Vznikají (a) porovnáním nově stažených dat z Bakalářů s předchozí verzí,
- * (b) při zadání úkolu, testu nebo zkoušení spolužákem. Při úplně první synchronizaci se nic nevytváří (jen se uloží základ).
+ * Zprávy: oznámení o změnách. Vznikají (a) při změně rozvrhu, (b) při zadání úkolu, testu nebo zkoušení spolužákem,
+ * (c) z pokladny, služeb, poznámek a nástěnky.
  */
 import { all, get, run, tx } from "./db";
 import { addDays, dayName, fmtShort, mondayOf, pragueNow } from "./dates";
 import { isSelfStudy, roomText } from "./selfstudy";
 import { listTests } from "./content";
 import { pushMessage, pushRefresh } from "./push";
-import { absenceHours, type AbsenceData, type MarksData, type Timetable } from "./types";
+import type { Timetable } from "./types";
 import type { User } from "./session";
 
 export type Category = "timetable" | "marks" | "absence" | "classwork" | "komens" | "duty" | "cash" | "notes" | "board" | "system";
 export const CATEGORIES: { id: Category; label: string; hint: string }[] = [
   { id: "timetable", label: "Změny v rozvrhu", hint: "suplování, zrušené hodiny, jiná učebna" },
-  { id: "marks", label: "Nové známky", hint: "když ti učitel zapíše známku" },
-  { id: "absence", label: "Absence", hint: "nový nebo upravený záznam absence" },
-  { id: "komens", label: "Komens a nástěnka", hint: "nová zpráva od učitele nebo školy v Bakalářích" },
   { id: "cash", label: "Pokladna", hint: "platby ve třídě, potvrzení a odmítnutí plateb" },
   { id: "duty", label: "Třídní služby", hint: "kdy máš službu ve třídě" },
   { id: "classwork", label: "Úkoly, testy a zkoušení", hint: "co zadali spolužáci pro tvou třídu nebo skupinu" },
@@ -108,45 +105,6 @@ export function detectTimetable(user: User, monday: string, data: Timetable, pre
   }
 }
 
-export function detectMarks(user: User, data: MarksData, prev: MarksData | null) {
-  if (!prev) return;
-  const had = new Set(prev.subjects.flatMap((s) => s.marks.map((m) => m.id)));
-  const fresh = data.subjects.flatMap((s) => s.marks.filter((m) => !had.has(m.id)).map((m) => ({ s, m })));
-  if (!fresh.length) return;
-  if (fresh.length > 5) {
-    notify(user.id, { category: "marks", title: `${fresh.length} nových známek`, body: [...new Set(fresh.map((f) => f.s.name))].join(", "), link: "/znamky", key: `marks:${fresh.map((f) => f.m.id).sort().join(",")}`.slice(0, 200) });
-    return;
-  }
-  for (const { s, m } of fresh) notify(user.id, { category: "marks", title: `Nová známka: ${s.name}: ${m.text}`, body: `${m.caption}${m.weight ? ` · váha ${m.weight}` : ""}`, link: "/znamky", key: `mark:${m.id}` });
-}
-
-export function detectAbsence(user: User, data: AbsenceData, prev: AbsenceData | null) {
-  if (!prev) return;
-  const sig = (d: AbsenceData["days"][number]) => `${d.date}|${d.missed}|${d.excused}|${d.unsolved}|${d.late}|${d.soon}|${d.school}`;
-  const had = new Set(prev.days.map(sig));
-  const hadDate = new Set(prev.days.map((d) => d.date));
-  const prevHours = new Map(prev.days.map((d) => [d.date, absenceHours(d)]));
-  const today = pragueNow().date;
-  for (const d of data.days) {
-    if (had.has(sig(d))) continue;
-    // nová absence v den, kdy se psal test: upozorni, o jaký test šlo (Bakaláři neříkají, které hodiny chyběly, proto „možná“)
-    if (d.date <= today && absenceHours(d) > (prevHours.get(d.date) ?? 0)) {
-      for (const t of listTests(user.id, user.class_id, d.date, d.date, { raw: true })) {
-        notify(user.id, {
-          category: "absence",
-          title: `Zameškaný test nebo zkoušení: ${t.subject_name}`,
-          body: `${fmtShort(t.date)}${t.topic ? ` · ${t.topic}` : ""} · v ten den máš zapsanou absenci (${absenceHours(d)} hod.), test nebo zkoušení jsi možná nepsal(a). Domluv si náhradní termín.`,
-          link: "/testy-a-zkouseni",
-          key: `missedtest:${t.id}`,
-        });
-      }
-    }
-    const bits = [absenceHours(d) ? `${absenceHours(d)} hod.` : "", d.excused ? `omluveno ${d.excused}` : "", d.unsolved ? `nevyřízeno ${d.unsolved}` : "", d.late ? `pozdě ${d.late}` : "", d.soon ? `odchod ${d.soon}` : ""].filter(Boolean);
-    notify(user.id, { category: "absence", title: hadDate.has(d.date) ? `Absence upravena: ${fmtShort(d.date)}` : `Nová absence: ${fmtShort(d.date)}`, body: bits.join(" · "), link: "/absence", key: `abs:${sig(d)}` });
-  }
-}
-
-/** Úkol, test nebo zkoušení zadal spolužák → upozorni ostatní, kteří ho uvidí (celá třída, nebo jen daná skupina). */
 export function notifyClassmates(author: User, groupId: number | null, m: Omit<NewMessage, "key"> & { key: string }) {
   const recipients = all<{ id: number }>(
     `SELECT u.id FROM users u WHERE u.class_id = ? AND u.id != ? AND (? IS NULL OR u.id IN (SELECT user_id FROM user_subjects WHERE group_id = ?))`,

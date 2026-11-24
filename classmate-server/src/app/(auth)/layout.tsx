@@ -11,9 +11,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <AppBridge signedIn={false} />
       <aside className="auth-hero">
         <div>
-          <Link href="/" className="brand-name" aria-label="Zpět na úvodní stránku">Classmate</Link>
+          <Link href="/" className="brand-name" aria-label="Zpět na přihlášení">Classmate</Link>
+          <p className="made-by">made by <s>plojharsim</s> vitegg</p>
         </div>
-        <p className="tag-line">Rozvrh, úkoly, testy a zkoušení a známky na jednom místě.</p>
+        <p className="tag-line">Soukromá aplikace naší třídy: rozvrh, úkoly, testy, poznámky a pokladna na jednom místě.</p>
       </aside>
       <section className="auth-form">
         <div className="inner">{children}</div>

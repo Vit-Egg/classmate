@@ -21,7 +21,7 @@ export default async function AuthorizePage({ searchParams }: { searchParams: Pr
   const user = await getCurrentUser();
   if (!user) {
     const here = "/oauth/authorize?" + new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string")).toString();
-    redirect(`/prihlaseni?next=${encodeURIComponent(here)}`);
+    redirect(`/?next=${encodeURIComponent(here)}`);
   }
   if (user.demo) redirect("/nastaveni"); // ukázkový účet se k AI aplikacím připojit nedá
   const host = new URL(req.redirectUri);

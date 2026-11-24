@@ -1186,4 +1186,24 @@ CREATE TABLE IF NOT EXISTS board_mail (
 ) WITHOUT ROWID;
 `,
   },
+  {
+    id: 75,
+    sql: `
+-- Přestavba na aplikaci jedné třídy: bez Strava.cz, Microsoft 365 a Bakalářů. Registrace jen na pozvánku ke jménu ze seznamu třídy.
+DROP TABLE IF EXISTS strava_accounts;
+DROP TABLE IF EXISTS mail_accounts;
+DELETE FROM cache;
+UPDATE users SET bakalari_username = NULL, bakalari_refresh_enc = NULL;
+UPDATE schools SET bakalari_url = NULL;
+CREATE TABLE IF NOT EXISTS invites (
+  code_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS invites_user ON invites (user_id);
+`,
+  },
 ];

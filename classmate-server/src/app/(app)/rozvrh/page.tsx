@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { PersistedSeg } from "@/components/PersistedSeg";
-import { SyncNotice } from "@/components/SyncNotice";
 import { TimetableView, shareModel, type LessonItems } from "@/components/Timetable";
 import { TimetableShare } from "@/components/TimetableShare";
 import { subjectHues } from "@/lib/content";
@@ -63,7 +62,7 @@ export default async function TimetablePage({ searchParams }: { searchParams: Pr
       <div className="page-head">
         <div>
           <h1 className="title">Rozvrh</h1>
-          <p className="subtitle">{picked ? `Týden ${fmtShort(picked)} – ${fmtShort(addDays(picked, 4))}` : tab.key === "permanent" ? "Základní rozvrh bez změn a suplování." : "Aktuální rozvrh z Bakalářů včetně změn"}</p>
+          <p className="subtitle">{picked ? `Týden ${fmtShort(picked)} – ${fmtShort(addDays(picked, 4))}` : tab.key === "permanent" ? "Základní rozvrh bez změn a suplování." : "Rozvrh třídy na tento týden"}</p>
         </div>
         {share && <TimetableShare model={share} file={`rozvrh-${weekStart ?? "staly"}`} />}
       </div>
@@ -78,7 +77,6 @@ export default async function TimetablePage({ searchParams }: { searchParams: Pr
           <PersistedSeg param="o" cookie="tt_view" pref="tt_view" label="Zobrazení" current={orientation} options={[{ value: "h", label: "Horizontálně" }, { value: "v", label: "Vertikálně" }]} />
         </div>
       </div>
-      <SyncNotice result={result} />
       {result.data && (
         <div className="tt-print-area">
         <p className="print-only">{heading}</p>

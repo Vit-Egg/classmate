@@ -10,6 +10,7 @@
  * - každá změna se zapisuje do auditního záznamu (cash_log).
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { can } from "./permissions";
 import QRCode from "qrcode";
 import { decrypt, encrypt } from "./crypto";
 import { all, get, rateLimit, run, tx } from "./db";
@@ -47,11 +48,11 @@ export const classCash = (classId: number) => get<ClassRow>("SELECT id, name, ca
 export const cashEnabled = (classId: number) => !!classCash(classId)?.cash_enabled;
 
 /** Smí uživatel spravovat Pokladnu dané třídy? Správce kteroukoli (zapnutou), pokladník jen svou. */
-export const canManage = (user: Pick<User, "role" | "treasurer" | "class_id">, classId: number) => cashEnabled(classId) && (user.role === "admin" || (!!user.treasurer && user.class_id === classId));
+export const canManage = (user: Pick<User, "role" | "treasurer" | "class_id" | "is_owner" | "permissions">, classId: number) => cashEnabled(classId) && (can(user, "pokladna") || (!!user.treasurer && user.class_id === classId));
 
 /** Třídy, které uživatel spravuje (správce všechny zapnuté, pokladník svou). */
-export function managedClasses(user: Pick<User, "role" | "treasurer" | "class_id">) {
-  if (user.role === "admin") return all<{ id: number; name: string; school: string }>("SELECT c.id, c.name, s.name AS school FROM classes c JOIN schools s ON s.id = c.school_id WHERE c.cash_enabled = 1 ORDER BY s.name, c.name");
+export function managedClasses(user: Pick<User, "role" | "treasurer" | "class_id" | "is_owner" | "permissions">) {
+  if (can(user, "pokladna")) return all<{ id: number; name: string; school: string }>("SELECT c.id, c.name, s.name AS school FROM classes c JOIN schools s ON s.id = c.school_id WHERE c.cash_enabled = 1 ORDER BY s.name, c.name");
   if (user.treasurer && cashEnabled(user.class_id)) return all<{ id: number; name: string; school: string }>("SELECT c.id, c.name, s.name AS school FROM classes c JOIN schools s ON s.id = c.school_id WHERE c.id = ?", user.class_id);
   return [];
 }
@@ -62,7 +63,7 @@ const log = (classId: number, actor: number | null, action: string, detail = "",
 /* ---------- nastavení správcem ---------- */
 
 export function adminSetCash(admin: User, classId: number, enabled: boolean) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!admin.is_owner) fail("Tohle smí jen vlastník serveru.");
   if (!classCash(classId)) fail("Třída neexistuje.");
   run("UPDATE classes SET cash_enabled = ? WHERE id = ?", enabled ? 1 : 0, classId);
   log(classId, admin.id, enabled ? "module_on" : "module_off");
@@ -70,7 +71,7 @@ export function adminSetCash(admin: User, classId: number, enabled: boolean) {
 }
 
 export function adminSetTreasurer(admin: User, userId: number, on: boolean) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!can(admin, "pokladna")) fail("Na pokladnu nemáš oprávnění.");
   const u = get<{ class_id: number; name: string; role: string }>("SELECT class_id, name, role FROM users WHERE id = ?", userId);
   if (!u) fail("Uživatel neexistuje.");
   if (get("SELECT 1 FROM users WHERE id = ? AND placeholder = 1", userId)) fail("Neregistrovaný člen pokladníkem být nemůže.");
@@ -82,7 +83,7 @@ export function adminSetTreasurer(admin: User, userId: number, on: boolean) {
 
 /** Uloží klíče Stripe třídy (šifrovaně). Klíč má být omezený (restricted) jen na Checkout Sessions. */
 export function adminSetStripe(admin: User, classId: number, key: string, webhook: string) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!admin.is_owner) fail("Tohle smí jen vlastník serveru.");
   if (!classCash(classId)) fail("Třída neexistuje.");
   const k = key.trim();
   const w = webhook.trim();
@@ -94,7 +95,7 @@ export function adminSetStripe(admin: User, classId: number, key: string, webhoo
 }
 
 export function adminClearStripe(admin: User, classId: number) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!admin.is_owner) fail("Tohle smí jen vlastník serveru.");
   const m = methods(classId);
   if (m.card && !m.personal && !m.qr) fail("Karta je teď jediný zapnutý způsob platby. Nejdřív zapni jiný.");
   run("UPDATE classes SET stripe_key_enc = NULL, stripe_webhook_enc = NULL, cash_card = 0 WHERE id = ?", classId);
@@ -164,7 +165,7 @@ export function methods(classId: number): { personal: boolean; qr: boolean; card
  * QR vyžaduje číslo účtu, karta uložené klíče Stripe.
  */
 export function adminSetMethods(admin: User, classId: number, o: { personal: boolean; qr: boolean; card: boolean; account: string; name: string }) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!can(admin, "pokladna")) fail("Na pokladnu nemáš oprávnění.");
   const c = classCash(classId);
   if (!c) return fail("Třída neexistuje.");
   const raw = o.account.trim();

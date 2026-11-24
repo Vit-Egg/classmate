@@ -1,5 +1,6 @@
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { aiEnabled } from "@/lib/ai";
+import { isManager } from "@/lib/permissions";
 import { get } from "@/lib/db";
 import { EggGame } from "@/components/EggGame";
 import { ImageLightbox } from "@/components/ImageLightbox";
@@ -40,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const training = trainingActive(user);
   return (
     <div className="shell">
-      <Sidebar me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={user.role === "admin"} slots={slots} unread={unreadCount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (user.role === "admin" && anyCash())} training={training} />
+      <Sidebar me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={isManager(user)} slots={slots} unread={unreadCount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (isManager(user) && anyCash())} training={training} />
       <main className="main">{children}</main>
       <AppBridge signedIn />
       <NavProgress />
@@ -52,8 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FullscreenBell slots={slots} />
       <EggGame />
       {!user.demo && <FeedbackDialog />}
-      <Shortcuts isAdmin={user.role === "admin"} keys={keys} />
-      <CommandPalette isAdmin={user.role === "admin"} keys={keys} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} cash={!!user.cash_enabled} training={training} />
+      <Shortcuts isAdmin={isManager(user)} keys={keys} />
+      <CommandPalette isAdmin={isManager(user)} keys={keys} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} cash={!!user.cash_enabled} training={training} />
     </div>
   );
 }

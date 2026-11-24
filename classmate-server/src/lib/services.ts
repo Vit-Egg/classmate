@@ -24,6 +24,7 @@ import { notify, notifyClassmates } from "./messages";
 import { fmtShort, plural } from "./dates";
 import { collabClose, collabEmit, collabFlush, collabKick, collabReplace } from "./collab";
 import type { User } from "./session";
+import { ALL_PERMISSIONS, can, isManager, parsePermissions, type Permission } from "./permissions";
 
 export class ServiceError extends Error {}
 /** Poznámka se mezitím změnila jinde (jiné okno, zařízení); ukládání se zastaví, aby nic nepřepsalo novější verzi. */
@@ -63,7 +64,7 @@ const isPrivate = (v: unknown) => (v === true || v === "on" || v === "1" ? 1 : 0
 /** Cizí soukromá položka pro uživatele neexistuje; ostatní smí upravit autor nebo správce. */
 function canManage(t: { created_by: number | null; private: number }, user: User, what: string, detail?: string) {
   if (t.private && t.created_by !== user.id) fail(`${what} neexistuje.`);
-  if (t.created_by !== user.id && user.role !== "admin") fail(`Upravit nebo smazat ${what.toLowerCase()} může jen ten, kdo ${what === "Událost" ? "ji přidal" : "ho zadal"}, nebo správce.`);
+  if (t.created_by !== user.id && !can(user, "moderace")) fail(`Upravit nebo smazat ${what.toLowerCase()} může jen ten, kdo ${what === "Událost" ? "ji přidal" : "ho zadal"}, nebo správce.`);
   // správce zasahuje do cizí položky: zapíše se, co a čí to bylo
   if (t.created_by !== user.id) audit(user, "admin_content", { targetUser: t.created_by ? { id: t.created_by, name: get<{ name: string }>("SELECT name FROM users WHERE id = ?", t.created_by)?.name } : null, target: what, detail });
 }
@@ -551,8 +552,17 @@ export function setNoteTitleTemplate(user: User, template: unknown) {
 
 /* ---------- správa (jen správce) ---------- */
 
+/** Jakýkoli správce (seznam uživatelů, přehled). */
 function admin(user: User) {
-  if (user.role !== "admin") fail("Tohle smí jen správce.");
+  if (!isManager(user)) fail("Tohle smí jen správce.");
+}
+/** Správce s konkrétním oprávněním. */
+function needs(user: User, p: Permission) {
+  if (!can(user, p)) fail("Na tohle nemáš oprávnění. Požádej vlastníka serveru.");
+}
+/** Jen vlastník serveru. */
+function owner(user: User) {
+  if (!user.is_owner) fail("Tohle smí jen vlastník serveru.");
 }
 
 /** Adresa Bakalářů u školy se už nepoužívá (třídní aplikace s Bakaláři nekomunikuje). */
@@ -590,16 +600,8 @@ export function adminUsers(user: User, q = "") {
   );
 }
 
-export function adminCreateSchool(user: User, name: unknown, url: unknown) {
-  admin(user);
-  const n = schoolName(name);
-  const id = Number(run("INSERT INTO schools (name, bakalari_url, created_at) VALUES (?, ?, ?)", n, schoolUrl(url), Date.now()).lastInsertRowid);
-  audit(user, "school_create", { target: n });
-  return id;
-}
-
 export function adminUpdateSchool(user: User, id: number, name: unknown, url: unknown) {
-  admin(user);
+  owner(user);
   const n = schoolName(name);
   if (!run("UPDATE schools SET name = ?, bakalari_url = ? WHERE id = ?", n, schoolUrl(url), id).changes) fail("Škola neexistuje.");
   audit(user, "school_update", { target: n });
@@ -607,7 +609,7 @@ export function adminUpdateSchool(user: User, id: number, name: unknown, url: un
 
 /** Uloží seznam studentů třídy (viz lib/roster.ts). Vrací, kolik neregistrovaných členů přibylo a kolik jich zmizelo. */
 export function adminSetRoster(user: User, classId: number, text: unknown) {
-  admin(user);
+  needs(user, "clenove");
   try {
     const r = saveRoster(classId, String(text ?? ""));
     audit(user, "roster_set", { target: classLabel(classId), detail: `${r.total} jmen, přibylo ${r.added}, odebráno ${r.removed}` });
@@ -620,7 +622,7 @@ export function adminSetRoster(user: User, classId: number, text: unknown) {
 
 /** Přejmenuje registrovaného člena (jméno mu nastavuje správce, aby seděl se seznamem třídy). Řádek v seznamu se přepíše. */
 export function adminRenameUser(user: User, userId: number, name: unknown) {
-  admin(user);
+  needs(user, "clenove");
   const n = parse(z.string().trim().min(2, "Napiš jméno aspoň o dvou znacích.").max(100, "Jméno je moc dlouhé.").transform((v) => v.replace(/\s+/g, " ")), name);
   const u = get<{ name: string; class_id: number; placeholder: number }>("SELECT name, class_id, placeholder FROM users WHERE id = ?", userId);
   if (!u) fail("Uživatel neexistuje.");
@@ -640,7 +642,7 @@ const mailDomain = z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9.-]*\.
 
 /** Umělá inteligence pro celou aplikaci: pořadí modelů (první je hlavní, ostatní zálohy) a API klíče Google AI, každé s komentářem. Pořadí v zaslaných datech je pořadí použití. */
 export function adminAiSettings(user: User, raw: unknown) {
-  admin(user);
+  owner(user);
   let data: unknown;
   try {
     data = JSON.parse(String(raw ?? ""));
@@ -671,72 +673,8 @@ export function adminAiSettings(user: User, raw: unknown) {
   audit(user, "ai_settings", { detail: `${models.length} modelů, ${keys.length} klíčů` }); // klíče samotné se nikdy nezapisují
 }
 
-/** Školní e-mail u školy: Microsoft 365 (nic se nenastavuje, koncovka je v nastavení Microsoft 365), vlastní IMAP/SMTP, nebo vypnuto. */
-export function adminSchoolMail(user: User, id: number, input: { kind: unknown; domain: unknown; imapHost: unknown; imapPort: unknown; smtpHost: unknown; smtpPort: unknown }) {
-  admin(user);
-  const school = get<{ ms_domain: string | null; ms_enabled: number }>("SELECT ms_domain, ms_enabled FROM schools WHERE id = ?", id);
-  if (!school) fail("Škola neexistuje.");
-  if (input.kind === "microsoft") {
-    if (!school!.ms_enabled || !school!.ms_domain) fail("Nejdřív zapni Microsoft 365 u školy.");
-    run("UPDATE schools SET mail_kind = 'microsoft' WHERE id = ?", id);
-    audit(user, "school_mail", { target: schoolLabel(id), detail: "Microsoft 365" });
-    return;
-  }
-  if (input.kind !== "imap") {
-    run("UPDATE schools SET mail_kind = NULL WHERE id = ?", id);
-    audit(user, "school_mail", { target: schoolLabel(id), detail: "vypnuto" });
-    return;
-  }
-  const host = z.string().trim().max(200).regex(/^[a-z0-9.-]+$/i, "Server může mít jen písmena, čísla, tečky a pomlčky.").refine((h) => !internalHost(h), "Poštovní server musí být veřejná internetová adresa, ne adresa uvnitř sítě.");
-  const port = z.coerce.number().int().min(1).max(65535);
-  const domain = parse(z.object({ d: mailDomain }), { d: String(input.domain ?? "").replace(/^@/, "") }).d;
-  const v = parse(z.object({ ih: host, ip: port, sh: host, sp: port }), { ih: input.imapHost, ip: input.imapPort || 993, sh: input.smtpHost, sp: input.smtpPort || 587 });
-  run("UPDATE schools SET mail_kind = 'imap', mail_domain = ?, mail_imap_host = ?, mail_imap_port = ?, mail_smtp_host = ?, mail_smtp_port = ? WHERE id = ?", domain, v.ih, v.ip, v.sh, v.sp, id);
-  audit(user, "school_mail", { target: schoolLabel(id), detail: `IMAP ${v.ih}:${v.ip}, SMTP ${v.sh}:${v.sp}, koncovka ${domain}` });
-}
-
-/** Microsoft 365 u školy: zapnout/vypnout a koncovka adres (třeba ssps.cz). Vypnutím se koncovka zachová, jen se přestane používat. */
-export function adminSchoolMicrosoft(user: User, id: number, enabled: unknown, domain: unknown) {
-  admin(user);
-  if (!get("SELECT 1 FROM schools WHERE id = ?", id)) fail("Škola neexistuje.");
-  const raw = String(domain ?? "").trim().replace(/^@/, "");
-  const on = enabled === "1" || enabled === "on" || enabled === true;
-  if (!on) {
-    run("UPDATE schools SET ms_enabled = 0, ms_domain = COALESCE(NULLIF(?, ''), ms_domain), mail_kind = CASE WHEN mail_kind = 'microsoft' THEN NULL ELSE mail_kind END WHERE id = ?", /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(raw) ? raw.toLowerCase() : "", id);
-    audit(user, "school_microsoft", { target: schoolLabel(id), detail: "vypnuto" });
-    return;
-  }
-  if (!raw) fail("Napiš koncovku adres školy, třeba ssps.cz.");
-  const d = parse(z.object({ d: mailDomain }), { d: raw }).d;
-  run("UPDATE schools SET ms_enabled = 1, ms_domain = ? WHERE id = ?", d, id);
-  audit(user, "school_microsoft", { target: schoolLabel(id), detail: `zapnuto, koncovka ${d}` });
-}
-
-/** Přepíná, jestli se do školy smí registrovat student kterékoli třídy z Bakalářů (třída se sama založí), nebo jen ze tříd, které správce založil. */
-export function adminSchoolAnyClass(user: User, id: number, any: unknown) {
-  admin(user);
-  const on = any === "1" || any === "on" || any === true;
-  if (!run("UPDATE schools SET any_class = ? WHERE id = ?", on ? 1 : 0, id).changes) fail("Škola neexistuje.");
-  audit(user, "school_any_class", { target: schoolLabel(id), detail: on ? "povoleny všechny třídy z Bakalářů" : "jen povolené třídy" });
-}
-
-export function adminDeleteSchool(user: User, id: number) {
-  admin(user);
-  if (get("SELECT 1 FROM users WHERE school_id = ?", id)) fail("Škola má uživatele, nejdřív je přesuň.");
-  const label = schoolLabel(id);
-  run("DELETE FROM schools WHERE id = ?", id);
-  audit(user, "school_delete", { target: label });
-}
-
-export function adminAddClass(user: User, schoolId: number, name: unknown) {
-  admin(user);
-  if (!get("SELECT 1 FROM schools WHERE id = ?", schoolId)) fail("Škola neexistuje.");
-  const n = className(name);
-  if (run("INSERT OR IGNORE INTO classes (school_id, name) VALUES (?, ?)", schoolId, n).changes) audit(user, "class_add", { target: `${schoolLabel(schoolId)} · ${n}` });
-}
-
 export function adminRenameClass(user: User, id: number, name: unknown) {
-  admin(user);
+  owner(user);
   try {
     const before = classLabel(id);
     const n = className(name);
@@ -748,40 +686,10 @@ export function adminRenameClass(user: User, id: number, name: unknown) {
   }
 }
 
-export function adminDeleteClass(user: User, id: number) {
-  admin(user);
-  if (get("SELECT 1 FROM users WHERE class_id = ? AND placeholder = 0", id)) fail("Ve třídě jsou uživatelé, nejdřív je přesuň.");
-  const label = classLabel(id);
-  audit(user, "class_delete", { target: label });
-  tx(() => {
-    run("DELETE FROM users WHERE class_id = ? AND placeholder = 1", id); // členové bez účtu ze seznamu třídy
-    run("DELETE FROM classes WHERE id = ?", id);
-  });
-}
-
-export function adminMoveUser(user: User, userId: number, classId: number) {
-  admin(user);
-  const target = get<{ id: number; school_id: number }>("SELECT id, school_id FROM classes WHERE id = ?", classId);
-  if (!target) fail("Třída neexistuje.");
-  const u = get<{ name: string; class_id: number; placeholder: number }>("SELECT name, class_id, placeholder FROM users WHERE id = ?", userId);
-  if (!u) fail("Uživatel neexistuje.");
-  if (u!.placeholder) fail("Člena bez účtu přesuneš úpravou seznamů studentů obou tříd.");
-  if (u!.class_id === classId) return;
-  if (memberNamed(classId, u!.name)) fail("V cílové třídě už je člověk se stejným jménem.");
-  tx(() => {
-    rosterRemove(u!.class_id, u!.name); // jméno přechází ze seznamu staré třídy do seznamu nové
-    rosterAdd(classId, u!.name);
-  });
-  run("UPDATE users SET class_id = ?, school_id = ?, treasurer = 0 WHERE id = ?", target!.id, target!.school_id, userId); // role pokladníka patří k třídě
-  run("DELETE FROM user_subjects WHERE user_id = ?", userId);
-  run("DELETE FROM cache WHERE user_id = ?", userId);
-  audit(user, "user_move", { targetUser: { id: userId, name: u!.name }, detail: `do ${classLabel(classId)}` });
-}
-
 const nameOf = (id: number) => get<{ name: string }>("SELECT name FROM users WHERE id = ?", id)?.name ?? null;
 
 export function adminSignOutUser(user: User, userId: number) {
-  admin(user);
+  needs(user, "clenove");
   run("DELETE FROM sessions WHERE user_id = ?", userId);
   run("DELETE FROM oauth_tokens WHERE user_id = ?", userId);
   run("DELETE FROM app_devices WHERE user_id = ?", userId);
@@ -789,7 +697,7 @@ export function adminSignOutUser(user: User, userId: number) {
 }
 
 export function adminResetTotp(user: User, userId: number) {
-  admin(user);
+  needs(user, "clenove");
   run("UPDATE users SET totp_enabled = 0, totp_secret_enc = NULL, totp_pending_enc = NULL WHERE id = ?", userId);
   run("DELETE FROM recovery_codes WHERE user_id = ?", userId);
   audit(user, "user_totp_reset", { targetUser: { id: userId, name: nameOf(userId) } });
@@ -797,13 +705,13 @@ export function adminResetTotp(user: User, userId: number) {
 
 /** Správce smaže uživateli všechny vyplněné kontakty (telefon, e-mail, sociální sítě a web) z profilu (například nevhodný odkaz). */
 export function adminClearSocials(user: User, userId: number) {
-  admin(user);
+  needs(user, "clenove");
   if (!run("UPDATE users SET socials = NULL WHERE id = ?", userId).changes) fail("Uživatel neexistuje.");
   audit(user, "user_socials_clear", { targetUser: { id: userId, name: nameOf(userId) } });
 }
 
 export function adminSetPassword(user: User, userId: number, password: unknown) {
-  admin(user);
+  needs(user, "clenove");
   const pw = parse(z.string().max(200, "Heslo je moc dlouhé."), password);
   const weak = passwordProblem(pw);
   if (weak) fail(weak);
@@ -817,12 +725,41 @@ export function adminSetPassword(user: User, userId: number, password: unknown) 
 }
 
 export function adminToggleAdmin(user: User, userId: number, makeAdmin?: boolean) {
-  admin(user);
+  owner(user);
   if (userId === user.id) fail("Sám sobě roli měnit nemůžeš.");
   if (get("SELECT 1 FROM users WHERE id = ? AND placeholder = 1", userId)) fail("Neregistrovaný člen správcem být nemůže.");
+  if (get("SELECT 1 FROM users WHERE id = ? AND is_owner = 1", userId)) fail("Vlastníkovi roli měnit nejde.");
   if (makeAdmin === undefined) run("UPDATE users SET role = CASE role WHEN 'admin' THEN 'user' ELSE 'admin' END WHERE id = ?", userId);
   else run("UPDATE users SET role = ? WHERE id = ?", makeAdmin ? "admin" : "user", userId);
+  // nový správce dostane všechna oprávnění (vlastník je pak může omezit), odebraný o ně přijde
+  run("UPDATE users SET permissions = CASE role WHEN 'admin' THEN ? ELSE '' END WHERE id = ?", ALL_PERMISSIONS.join(","), userId);
   audit(user, "admin_toggle", { targetUser: { id: userId, name: nameOf(userId) }, detail: get<{ role: string }>("SELECT role FROM users WHERE id = ?", userId)?.role === "admin" ? "nyní správce" : "nyní běžný uživatel" });
+}
+
+/** Vlastník nastaví správci oprávnění (seznam z PERMISSIONS). */
+export function adminSetPermissions(user: User, userId: number, perms: unknown) {
+  owner(user);
+  const target = get<{ role: string; is_owner: number; name: string }>("SELECT role, is_owner, name FROM users WHERE id = ?", userId);
+  if (!target) fail("Uživatel neexistuje.");
+  if (target!.is_owner) fail("Vlastník má vždy všechna oprávnění.");
+  if (target!.role !== "admin") fail("Oprávnění mají jen správci. Nejdřív ho jmenuj správcem.");
+  const list = parsePermissions(Array.isArray(perms) ? perms.join(",") : String(perms ?? ""));
+  run("UPDATE users SET permissions = ? WHERE id = ?", list.join(","), userId);
+  audit(user, "admin_permissions", { targetUser: { id: userId, name: target!.name }, detail: list.length ? list.join(", ") : "žádná oprávnění" });
+}
+
+/** Vlastník předá vlastnictví jinému správci (sám zůstane správcem se všemi oprávněními). */
+export function adminTransferOwner(user: User, userId: number) {
+  owner(user);
+  if (userId === user.id) fail("Už jsi vlastník.");
+  const target = get<{ role: string; placeholder: number; name: string }>("SELECT role, placeholder, name FROM users WHERE id = ?", userId);
+  if (!target || target.placeholder) fail("Uživatel neexistuje.");
+  if (target!.role !== "admin") fail("Vlastnictví jde předat jen správci.");
+  tx(() => {
+    run("UPDATE users SET is_owner = 0, permissions = ? WHERE id = ?", ALL_PERMISSIONS.join(","), user.id);
+    run("UPDATE users SET is_owner = 1, permissions = ? WHERE id = ?", ALL_PERMISSIONS.join(","), userId);
+  });
+  audit(user, "owner_transfer", { targetUser: { id: userId, name: target!.name } });
 }
 
 /* ---------- vlastní události v kalendáři ---------- */
@@ -890,7 +827,7 @@ export type { Audience } from "./announce";
  * a volitelně i e-mailem všem příjemcům (email). Odkaz smí vést jen dovnitř aplikace. Oznámení patří do kategorie „system“, kterou si uživatelé nevypínají.
  */
 export function adminAnnounce(user: User, input: { title: unknown; body: unknown; link: unknown; audience: Audience; /** tiché: jen zvonek, bez upozornění na zařízení */ silent?: boolean; /** poslat i e-mailem */ email?: boolean; /** čas odeslání v ms; prázdné nebo minulé = hned */ sendAt?: number | null }): { count: number; scheduled: boolean } {
-  admin(user);
+  needs(user, "nastenka");
   const v = parse(z.object({ title: z.string().trim().min(2, "Napiš nadpis oznámení.").max(120, "Nadpis je moc dlouhý."), body: z.string().trim().max(500, "Text je moc dlouhý (nejvíc 500 znaků).").default(""), link: z.string().trim().max(200).default("") }), { title: input.title, body: input.body ?? "", link: input.link ?? "" });
   if (v.link && !/^\/(?![/\\])[A-Za-z0-9/_\-?=&%.#]*$/.test(v.link)) fail("Odkaz musí vést dovnitř aplikace (začíná lomítkem, třeba /testy-a-zkouseni).");
   const a = input.audience;
@@ -908,7 +845,7 @@ export function adminAnnounce(user: User, input: { title: unknown; body: unknown
 }
 
 export function adminCancelAnnouncement(user: User, id: number) {
-  admin(user);
+  needs(user, "nastenka");
   try {
     cancelAnnouncement(user, id);
   } catch (e) {

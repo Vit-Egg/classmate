@@ -8,7 +8,7 @@ import { Icon } from "./Icon";
 
 const label = (id: string) => WIDGETS.find((w) => w.id === id)?.label ?? id;
 
-/** Úprava stránky Dnes: co se ukazuje, v jakém pořadí a ve kterém sloupci. Panely, které nejsou k dispozici (třeba Oběd bez Strava.cz), se nenabízejí. */
+/** Úprava stránky Dnes: co se ukazuje, v jakém pořadí a ve kterém sloupci. Panely, které nejsou k dispozici (třeba Pokladna, když ji třída nepoužívá), se nenabízejí. */
 export function TodayCustomize({ initial, available }: { initial: LayoutItem[]; available: string[] }) {
   const ref = useRef<HTMLDialogElement>(null);
   const router = useRouter();

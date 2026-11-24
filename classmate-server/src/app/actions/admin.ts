@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, requirePermission } from "@/lib/session";
 import { plural, pragueLocalToMs } from "@/lib/dates";
 import * as svc from "@/lib/services";
 import { audit } from "@/lib/audit";
@@ -22,13 +22,8 @@ async function guard(fn: (admin: Awaited<ReturnType<typeof requireAdmin>>) => vo
   return { ok: true };
 }
 
-export const createSchool = async (_: ActionState, fd: FormData) => guard((a) => void svc.adminCreateSchool(a, fd.get("name"), fd.get("url")));
 export const updateSchool = async (_: ActionState, fd: FormData) => guard((a) => svc.adminUpdateSchool(a, Number(fd.get("id")), fd.get("name"), fd.get("url")));
-export const updateSchoolMail = async (_: ActionState, fd: FormData) => guard((a) => svc.adminSchoolMail(a, Number(fd.get("id")), { kind: fd.get("kind"), domain: fd.get("domain"), imapHost: fd.get("imapHost"), imapPort: fd.get("imapPort"), smtpHost: fd.get("smtpHost"), smtpPort: fd.get("smtpPort") }));
-export const updateSchoolMicrosoft = async (_: ActionState, fd: FormData) => guard((a) => svc.adminSchoolMicrosoft(a, Number(fd.get("id")), fd.get("enabled"), fd.get("domain")));
-export const updateSchoolAnyClass = async (_: ActionState, fd: FormData) => guard((a) => svc.adminSchoolAnyClass(a, Number(fd.get("id")), fd.get("any")));
 export const updateAiSettings = async (_: ActionState, fd: FormData) => guard((a) => svc.adminAiSettings(a, fd.get("data")));
-export const addClass = async (_: ActionState, fd: FormData) => guard((a) => svc.adminAddClass(a, Number(fd.get("school")), fd.get("name")));
 export const renameClass = async (_: ActionState, fd: FormData) => guard((a) => svc.adminRenameClass(a, Number(fd.get("id")), fd.get("name")));
 
 export async function setRoster(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -49,15 +44,6 @@ export async function setRoster(_: ActionState, fd: FormData): Promise<ActionSta
 export const renameUser = async (_: ActionState, fd: FormData) => guard((a) => svc.adminRenameUser(a, Number(fd.get("user")), fd.get("name")));
 export const setUserPassword = async (_: ActionState, fd: FormData) => guard((a) => svc.adminSetPassword(a, Number(fd.get("user")), fd.get("password")));
 
-export async function deleteSchool(fd: FormData) {
-  await guard((a) => svc.adminDeleteSchool(a, Number(fd.get("id"))));
-}
-export async function deleteClass(fd: FormData) {
-  await guard((a) => svc.adminDeleteClass(a, Number(fd.get("id"))));
-}
-export async function moveUser(fd: FormData) {
-  await guard((a) => svc.adminMoveUser(a, Number(fd.get("user")), Number(fd.get("class"))));
-}
 export async function signOutUser(fd: FormData) {
   await guard((a) => svc.adminSignOutUser(a, Number(fd.get("user"))));
 }
@@ -98,7 +84,7 @@ export async function cancelAnnouncementAction(fd: FormData) {
 
 /** Správa → Členové: vytvoří pozvánku pro jméno ze seznamu třídy a ukáže odkaz, který správce pošle. */
 export async function createInviteAction(fd: FormData) {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("clenove");
   const userId = Number(fd.get("user"));
   let code: string;
   try {
@@ -110,3 +96,19 @@ export async function createInviteAction(fd: FormData) {
   audit(admin, "invite_create", { targetUser: { id: userId, name: get<{ name: string }>("SELECT name FROM users WHERE id = ?", userId)?.name ?? "" } });
   redirect(`/sprava?pozvanka=${encodeURIComponent(code)}&pro=${userId}#clenove`);
 }
+
+/** Vlastník nastaví správci oprávnění (zaškrtávací políčka „perm“). */
+export const setPermissionsAction = async (_: ActionState, fd: FormData) =>
+  guard((a) => svc.adminSetPermissions(a, Number(fd.get("user")), fd.getAll("perm").map(String)));
+
+/** Vlastník předá vlastnictví serveru jinému správci. */
+export async function transferOwnerAction(fd: FormData) {
+  await guard((a) => svc.adminTransferOwner(a, Number(fd.get("user"))));
+}
+
+/** Název třídy a školy (třída je na serveru jen jedna). */
+export const renameClassAndSchool = async (_: ActionState, fd: FormData) =>
+  guard((a) => {
+    svc.adminRenameClass(a, Number(fd.get("class")), fd.get("className"));
+    svc.adminUpdateSchool(a, Number(fd.get("school")), fd.get("schoolName"), null);
+  });

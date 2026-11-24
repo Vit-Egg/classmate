@@ -2,13 +2,13 @@ import Link from "next/link";
 import { AdminStats } from "@/components/AdminStats";
 import { adminStats } from "@/lib/adminstats";
 import { fmtDateTime } from "@/lib/dates";
-import { requireAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 
 export const metadata = { title: "Statistiky" };
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
-  await requireAdmin();
+  await requirePermission("audit");
   const s = adminStats();
   return (
     <div className="wide">

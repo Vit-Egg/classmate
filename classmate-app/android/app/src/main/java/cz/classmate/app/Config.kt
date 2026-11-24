@@ -3,12 +3,11 @@ package cz.classmate.app
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import android.webkit.CookieManager
 import cz.classmate.app.data.Store
 
 /**
- * Hodnoty aplikace. Adresa serveru je volba uživatele (úvodní obrazovka), výchozí/navrhovaný je oficiální server ze sestavení
- * (classmate.baseUrl). Server se po načtení drží v paměti, takže `baseUrl` je rychlé a stejné pro WebView, widgety i oznámení.
+ * Hodnoty aplikace. Adresa serveru je pevná ze sestavení (classmate.baseUrl v gradle.properties): aplikace patří jedné třídě
+ * a uživatel server nevybírá. Server se po načtení drží v paměti, takže `baseUrl` je rychlé a stejné pro WebView, widgety i oznámení.
  */
 object Config {
     /** oficiální server ze sestavení (navrhuje se na úvodní obrazovce) */
@@ -24,17 +23,9 @@ object Config {
 
     /** Načte uloženou adresu (volá se při startu aplikace). */
     fun init(ctx: Context) {
-        val store = Store(ctx)
-        var url = store.serverUrl
-        // Aplikace spárovaná nebo přihlášená před zavedením volby serveru zůstane na oficiálním serveru, ať se ptát nemusí.
-        if (url == null && (store.deviceToken != null || hasOldSession())) {
-            url = defaultServer
-            store.serverUrl = url
-        }
-        apply(url)
+        Store(ctx).serverUrl = defaultServer
+        apply(defaultServer)
     }
-
-    private fun hasOldSession() = runCatching { !CookieManager.getInstance().getCookie(defaultServer).isNullOrEmpty() }.getOrDefault(false)
 
     /** Uloží vybraný server (adresa musí být ověřená přes Servers.verify). */
     fun set(ctx: Context, origin: String) {

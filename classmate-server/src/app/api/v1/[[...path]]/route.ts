@@ -83,10 +83,10 @@ async function callTool(req: Request, user: User, name: string, args: Record<str
   if (!parsed.success) return fail(400, "invalid_arguments", "Neplatné argumenty: " + parsed.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; "), rid);
   try {
     const data = await tool.run(user, parsed.data);
-    // nástroje pro AI vracejí selhání Bakalářů jako { error: "…" }; v API je to řádná chyba
+    // nástroje pro AI vracejí selhání jako { error: "…" }; v API je to řádná chyba
     if (data && typeof data === "object" && Object.keys(data).length === 1 && typeof (data as any).error === "string") {
       const msg = (data as any).error as string;
-      return /nejsou propojené/.test(msg) ? fail(409, "bakalari_not_connected", msg, rid) : fail(502, "bakalari_unavailable", msg, rid);
+      return fail(409, "unavailable", msg, rid);
     }
     const out = data === undefined ? { ok: true } : data;
     return method === "GET" ? replyCached(req, out, rid) : reply(out, 200, rid);

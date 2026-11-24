@@ -4,6 +4,7 @@ import { z } from "zod";
 import { get, run, tx } from "./db";
 import { hashPassword } from "./crypto";
 import { passwordProblem } from "./password-policy";
+import { ALL_PERMISSIONS } from "./permissions";
 
 export const needsSetup = () => !get("SELECT 1 FROM users LIMIT 1");
 
@@ -48,7 +49,7 @@ export function createServer(input: unknown, token: string): number {
     const school = Number(run("INSERT INTO schools (name, created_at) VALUES (?, ?)", v.school, now).lastInsertRowid);
     const cls = Number(run("INSERT INTO classes (school_id, name, roster) VALUES (?, ?, ?)", school, v.class, v.name).lastInsertRowid); // správce je prvním jménem v seznamu třídy
     return Number(
-      run("INSERT INTO users (email, name, password_hash, role, school_id, class_id, created_at) VALUES (?, ?, ?, 'admin', ?, ?, ?)", v.email, v.name, hashPassword(v.password), school, cls, now).lastInsertRowid,
+      run("INSERT INTO users (email, name, password_hash, role, school_id, class_id, created_at, is_owner, permissions) VALUES (?, ?, ?, 'admin', ?, ?, ?, 1, ?)", v.email, v.name, hashPassword(v.password), school, cls, now, ALL_PERMISSIONS.join(",")).lastInsertRowid,
     );
   });
 }

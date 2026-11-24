@@ -1,0 +1,28 @@
+# Kontrola webové aplikace u každého pushe a pull requestu: typy a produkční sestavení.
+name: Server
+
+on:
+  push:
+    branches: [main]
+    paths: ["classmate-server/**", ".github/workflows/server.yml"]
+  pull_request:
+    paths: ["classmate-server/**", ".github/workflows/server.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: classmate-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: classmate-server/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

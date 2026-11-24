@@ -1,10 +1,10 @@
 # Produkční nasazení: aplikace + Caddy (automatické HTTPS od Let's Encrypt).
-# Spuštění: cp .env.production.example .env && docker compose up -d --build
+# Spuštění: cp .env.example .env (doplň DOMAIN, APP_SECRET, PUBLIC_URL) && docker compose up -d
 name: classmate
 services:
   app:
     # Hotový obraz z GitHubu (docker compose pull). Když ho nemáš, sestaví se lokálně (--build).
-    image: ghcr.io/classmatecz/classmate:latest
+    image: ghcr.io/vit-egg/classmate:latest
     build:
       context: .
       args:
@@ -20,9 +20,6 @@ services:
       DATA_DIR: /data
       COOKIE_SECURE: "true"
       PUBLIC_URL: ${PUBLIC_URL:-}
-      BACKGROUND_SYNC_MINUTES: ${BACKGROUND_SYNC_MINUTES:-5}
-      BACKGROUND_SYNC_PARALLEL: ${BACKGROUND_SYNC_PARALLEL:-8}
-      BAKALARI_CONCURRENCY: ${BAKALARI_CONCURRENCY:-6}
       AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
       DISK_MIN_FREE_MB: ${DISK_MIN_FREE_MB:-1024}
       FFMPEG_CONCURRENCY: ${FFMPEG_CONCURRENCY:-2}
@@ -32,10 +29,6 @@ services:
       IMAGE_QUOTA_MB: ${IMAGE_QUOTA_MB:-500}
       FILE_QUOTA_MB: ${FILE_QUOTA_MB:-1024}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-}
-      ANALYTICS_SRC: ${ANALYTICS_SRC:-}
-      ANALYTICS_WEBSITE_ID: ${ANALYTICS_WEBSITE_ID:-}
-      DEMO_EMAIL: ${DEMO_EMAIL:-}
-      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
       ANDROID_APP_CERTS: ${ANDROID_APP_CERTS:-}
       ANDROID_APP_PACKAGE: ${ANDROID_APP_PACKAGE:-}
       SETUP_TOKEN: ${SETUP_TOKEN:-}
@@ -51,8 +44,6 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
-      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
-      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
       TODOIST_CLIENT_ID: ${TODOIST_CLIENT_ID:-}
       TODOIST_CLIENT_SECRET: ${TODOIST_CLIENT_SECRET:-}
     volumes:

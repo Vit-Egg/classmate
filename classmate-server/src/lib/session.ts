@@ -45,11 +45,15 @@ export type User = {
   /** má třída zapnuté Třídní služby */
   duty_enabled: number;
   board_enabled: number;
+  /** vlastník serveru: smí všechno, jako jediný mění role a nastavení serveru */
+  is_owner: number;
+  /** oprávnění správce oddělená čárkou (viz src/lib/permissions.ts) */
+  permissions: string;
 };
 
 export const USER_SELECT = `
   SELECT u.id, u.email, u.name, u.role, u.share_notes, u.note_title_template, u.share_marks_stats, u.shortcuts, u.ui_prefs, u.email_notify, u.email_confirmed_for, u.email_gate, u.school_id, u.class_id, s.name AS school_name, c.name AS class_name,
-         s.bakalari_url, u.bakalari_username, u.bakalari_refresh_enc, u.last_sync_at, u.totp_enabled, u.created_at, u.demo, u.demo_expires_at, u.treasurer, c.cash_enabled, c.duty_enabled, c.board_enabled
+         s.bakalari_url, u.bakalari_username, u.bakalari_refresh_enc, u.last_sync_at, u.totp_enabled, u.created_at, u.demo, u.demo_expires_at, u.treasurer, c.cash_enabled, c.duty_enabled, c.board_enabled, u.is_owner, u.permissions
   FROM users u JOIN schools s ON s.id = u.school_id JOIN classes c ON c.id = u.class_id`;
 
 export async function createSession(userId: number) {
@@ -109,7 +113,22 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (user.role !== "admin") redirect("/dnes");
+  if (user.role !== "admin" && !user.is_owner) redirect("/dnes");
+  return user;
+}
+
+/** Stránka nebo akce jen pro správce s daným oprávněním (vlastník má všechna). */
+export async function requirePermission(p: import("./permissions").Permission) {
+  const user = await requireAdmin();
+  const { can } = await import("./permissions");
+  if (!can(user, p)) redirect("/sprava");
+  return user;
+}
+
+/** Jen pro vlastníka serveru. */
+export async function requireOwner() {
+  const user = await requireAdmin();
+  if (!user.is_owner) redirect("/sprava");
   return user;
 }
 

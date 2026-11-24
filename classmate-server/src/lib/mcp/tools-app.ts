@@ -150,7 +150,7 @@ export const appTools: Tool[] = [
   {
     name: "get_leaderboard",
     title: "Žebříček třídy",
-    description: "Pořadí třídy podle trofejí (známky a absence se nepočítají). Vidí ho jen ten, kdo se z žebříčku sám neskryl.",
+    description: "Pořadí třídy podle trofejí. Vidí ho jen ten, kdo se z žebříčku sám neskryl.",
     schema: z.object({}),
     annotations: read,
     run(user) {

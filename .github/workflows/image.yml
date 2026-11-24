@@ -1,0 +1,53 @@
+# Sestaví Docker obraz aplikace a nahraje ho do ghcr.io/vit-egg/classmate (latest a podle commitu).
+# Server (např. CasaOS) pak jen stáhne hotový obraz místo vlastního sestavení.
+name: Obraz aplikace
+
+on:
+  push:
+    branches: [main]
+    paths: ["classmate-server/**", ".github/workflows/image.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: obraz
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # číslo verze v aplikaci je počet commitů
+      - name: Verze z gitu
+        id: ver
+        run: |
+          echo "count=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(git log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: classmate-server
+          # amd64 pro běžné počítače a mini PC, arm64 pro Raspberry Pi a podobné desky s CasaOS
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILD_COUNT=${{ steps.ver.outputs.count }}
+            BUILD_SHA=${{ steps.ver.outputs.sha }}
+            BUILD_DATE=${{ steps.ver.outputs.date }}
+          push: true
+          tags: |
+            ghcr.io/vit-egg/classmate:latest
+            ghcr.io/vit-egg/classmate:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

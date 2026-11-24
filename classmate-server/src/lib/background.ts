@@ -12,6 +12,7 @@ import { purgeHousekeeping } from "./expire";
 import { purgeStudy } from "./study";
 import { achievementsSweep } from "./achievements";
 import { todoistTick } from "./todoist";
+import { refreshCalendars } from "./personal-calendar";
 
 /** Odesílání e-mailových upozornění a push (jednou za minutu). */
 export function startEmailWorker() {
@@ -84,4 +85,25 @@ export function startTodoistWorker() {
   };
   setTimeout(tick, 90_000);
   setInterval(tick, 2 * 60_000).unref?.();
+}
+
+/** Osobní kalendáře (ICS): každých 5 minut se stáhnou ty, které se nestahovaly přes 12 minut. */
+export function startCalendarWorker() {
+  const g4 = globalThis as unknown as { __classmateCal?: boolean };
+  if (g4.__classmateCal) return;
+  g4.__classmateCal = true;
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      await refreshCalendars();
+    } catch (e) {
+      console.error("calendar worker error", e);
+    } finally {
+      running = false;
+    }
+  };
+  setTimeout(tick, 60_000);
+  setInterval(tick, 5 * 60_000).unref?.();
 }

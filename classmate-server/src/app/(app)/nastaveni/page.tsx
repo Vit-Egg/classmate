@@ -30,6 +30,8 @@ import { all } from "@/lib/db";
 import { originOf } from "@/lib/oauth";
 import { fmtDate, fmtTimeSeconds } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
+import { calendarStatus } from "@/lib/personal-calendar";
+import { removePersonalCalendarAction, savePersonalCalendar } from "@/app/actions/kalendar-osobni";
 import { removeMyAvatar } from "@/app/actions/avatar";
 import { AvatarBig } from "@/components/Avatar";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -92,6 +94,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     if (!list.includes(name)) teachers.set(l.subjectId, [...list, name]);
   }
   const todoist = todoistAccount(user.id);
+  const cal = calendarStatus(user.id);
   const season = activeSeason();
   const sp = await searchParams;
   const group = GROUPS.find((g) => g.id === sp.k)?.id ?? "obecne";
@@ -241,6 +244,31 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               ))}
             </div>
           ) : <div className="empty">Zatím žádné skupiny.</div>}
+        </section>
+
+        <section id="kalendar">
+          <h2 className="section" style={{ marginBottom: 12 }}>Můj kalendář (změny rozvrhu)</h2>
+          {cal ? (
+            <>
+              <div className="card rows">
+                <div className="kv"><div><small>Propojený kalendář</small><strong>{cal.host || "kalendář"}</strong></div></div>
+                <div className="kv"><div><small>Naposledy načteno</small><strong>{cal.lastOk ? fmtDateTime(cal.lastOk) : "zatím nikdy"}{cal.events ? ` · ${cal.events} událostí` : ""}</strong></div></div>
+                {cal.error && <div className="kv"><div><small>Poslední pokus</small><strong className="msg-error">{cal.error}</strong></div></div>}
+              </div>
+              <div className="btn-row" style={{ marginTop: 12 }}>
+                <form action={removePersonalCalendarAction}><ConfirmButton className="btn danger" message="Odpojit kalendář? Změny rozvrhu z něj se přestanou ukazovat.">Odpojit</ConfirmButton></form>
+              </div>
+            </>
+          ) : (
+            <div className="card card-pad">
+              <p style={{ margin: "0 0 12px" }}>Vlož tajnou adresu svého kalendáře ve formátu iCal (ICS). Classmate ho bude každých pár minut stahovat a změny proti stálému rozvrhu (odpadlé hodiny, suplování, jiná učebna) uvidíš <b>jen ty</b> v Rozvrhu, na stránce Dnes a ve zprávách.</p>
+              <ActionForm action={savePersonalCalendar}>
+                <label className="field"><span>Adresa kalendáře</span><input className="input" name="url" type="url" inputMode="url" placeholder="https://…/basic.ics" autoComplete="off" required /></label>
+                <p className="hint" style={{ marginTop: 0 }}>Adresa se ukládá šifrovaně a nikdo jiný ji nevidí. U Google kalendáře ji najdeš v nastavení kalendáře jako „Tajná adresa ve formátu iCal“. Classmate sám s žádným školním systémem nekomunikuje.</p>
+                <div><Submit pendingText="Zkouším kalendář…">Propojit</Submit></div>
+              </ActionForm>
+            </div>
+          )}
         </section>
 
         <section>

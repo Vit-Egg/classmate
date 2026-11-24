@@ -13,7 +13,6 @@ import { destroySession, requireUser } from "@/lib/session";
 import { generateSecret, verifyTotp } from "@/lib/totp";
 import { generateRecoveryCodes } from "@/lib/twofa";
 import { ServiceError, setNoteTitleTemplate as svcTitle, setShortcuts as svcShortcuts } from "@/lib/services";
-import { withdrawMarks } from "@/lib/stats";
 import { purgeUserAudio } from "@/lib/audio";
 import { purgeUserImages } from "@/lib/images";
 import { purgeUserFiles } from "@/lib/note-files";
@@ -109,10 +108,9 @@ export async function deleteAccount(_: ActionState, fd: FormData): Promise<Actio
   const blocked = demoBlocked(user);
   if (blocked) return blocked;
   if (!(await checkPassword(user.id, String(fd.get("password") ?? "")))) return { error: "Nesprávné heslo." };
-  if (user.role === "admin" && get<{ n: number }>("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'")!.n === 1 && get<{ n: number }>("SELECT COUNT(*) AS n FROM users")!.n > 1) {
-    return { error: "Jsi jediný správce. Nejdřív někoho dalšího jmenuj správcem." };
+  if (user.is_owner && get<{ n: number }>("SELECT COUNT(*) AS n FROM users WHERE placeholder = 0")!.n > 1) {
+    return { error: "Jsi vlastník serveru. Nejdřív ve Správě předej vlastnictví jinému správci." };
   }
-  withdrawMarks(user.id); // staré anonymní příspěvky známek (z doby Bakalářů)
   purgeUserAudio(user.id);
   purgeUserImages(user.id);
   purgeUserFiles(user.id);

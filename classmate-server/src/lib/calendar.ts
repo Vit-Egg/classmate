@@ -1,5 +1,6 @@
 /** Kalendář: sbírá všechno s datem z celé aplikace do jednoho seznamu. */
 import { all } from "./db";
+import { can } from "./permissions";
 import { isSelfStudy, roomText } from "./selfstudy";
 import { credit } from "./credit";
 import { addDays, dayName, mondayOf, pragueNow } from "./dates";
@@ -24,7 +25,7 @@ const ORDER: Record<CalKind, number> = { event: 0, test: 1, change: 2, other: 3,
 const PAST_DAYS = 70;
 const FUTURE_DAYS = 150;
 
-const canEdit = (t: { created_by: number | null; private?: number }, user: User) => t.created_by === user.id || (user.role === "admin" && !t.private);
+const canEdit = (t: { created_by: number | null; private?: number }, user: User) => t.created_by === user.id || (can(user, "moderace") && !t.private);
 
 /** Odkaz na rozvrh s rozkliknutou konkrétní hodinou (to umí jen tento a příští týden). */
 function lessonLink(lessons: { day: number; hour: number }[], l: { day: number; hour: number }, monday: string, today: string) {

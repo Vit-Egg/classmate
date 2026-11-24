@@ -1,0 +1,111 @@
+# Classmate na CasaOS (nebo na jakémkoli počítači s Dockerem).
+#
+# V CasaOS: App Store → Custom Install (ikona +) → Import → vlož tento soubor, doplň hodnoty označené ZMĚŇ a nainstaluj.
+# Mimo CasaOS: zkopíruj soubor na server, doplň hodnoty a spusť `docker compose up -d`.
+#
+# Co se spustí:
+#   app          – Classmate (hotový obraz z GitHubu, ghcr.io/vit-egg/classmate)
+#   cloudflared  – Cloudflare Tunnel: aplikace je dostupná z internetu přes HTTPS bez otevírání portů na routeru
+#   backup       – každou noc ve 3:15 zazálohuje databázi a klíče do /DATA/AppData/classmate/backup, drží 30 dní
+#
+# Data leží v /DATA/AppData/classmate/data. Bez souboru data/.secret (vytvoří se sám) nejdou rozšifrovat uložené klíče,
+# proto zálohuj celou složku /DATA/AppData/classmate i mimo tenhle počítač.
+name: classmate
+
+services:
+  # jednorázově připraví složku s daty: aplikace v obrazu běží jako uživatel 1001, který do ní musí smět zapisovat
+  prepare:
+    image: alpine:3.20
+    container_name: classmate-prepare
+    restart: "no"
+    volumes:
+      - /DATA/AppData/classmate/data:/data
+    command: ["sh", "-c", "chown -R 1001:1001 /data"]
+
+  app:
+    image: ghcr.io/vit-egg/classmate:latest
+    container_name: classmate
+    restart: unless-stopped
+    environment:
+      # ZMĚŇ: veřejná adresa (odkazy v pozvánkách a e-mailech), např. https://classmate.cz
+      PUBLIC_URL: "https://classmate.cz"
+      # ZMĚŇ: min. 32 náhodných znaků (openssl rand -base64 48). Zálohuj ji zvlášť, bez ní nejdou rozšifrovat uložené klíče.
+      APP_SECRET: "ZMEN_ME_na_dlouhy_nahodny_retezec_aspon_32_znaku"
+      # ZMĚŇ: instalační kód pro průvodce prvním spuštěním (/zprovozneni); po založení správce už není potřeba
+      SETUP_TOKEN: "ZMEN_ME"
+      # ZMĚŇ: kdo je správce osobních údajů (ukazuje se v zásadách ochrany údajů) a kam mu psát
+      OPERATOR_NAME: ""
+      CONTACT_EMAIL: ""
+      # E-maily (pozvánky, zapomenuté heslo, upozornění). Bez SMTP_HOST se e-maily neposílají.
+      SMTP_HOST: ""
+      SMTP_PORT: "587"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "Classmate <classmate@example.cz>"
+      # Volitelné: Todoist přes OAuth (jinak jde propojit API tokenem)
+      TODOIST_CLIENT_ID: ""
+      TODOIST_CLIENT_SECRET: ""
+      # Pevná nastavení
+      DATA_DIR: /data
+      COOKIE_SECURE: "true"
+      TRUST_CLOUDFLARE: "true"
+      PUSH_QUIET_HOURS: "22-6"
+      AUDIT_RETENTION_DAYS: "365"
+      NODE_OPTIONS: "--max-old-space-size=1024"
+    volumes:
+      - /DATA/AppData/classmate/data:/data
+    expose:
+      - "3000"
+    depends_on:
+      prepare:
+        condition: service_completed_successfully
+    init: true
+    mem_limit: 1536m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: classmate-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # ZMĚŇ: token tunelu z Cloudflare (Zero Trust → Networks → Tunnels → tvůj tunel → Docker).
+      # V nastavení tunelu nasměruj veřejnou adresu (Public Hostname) na http://classmate:3000
+      TUNNEL_TOKEN: "ZMEN_ME"
+    depends_on:
+      - app
+
+  backup:
+    image: alpine:3.20
+    container_name: classmate-backup
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/classmate/data:/data   # zapisovatelně: SQLite v režimu WAL potřebuje i pro čtení soubor -shm
+      - /DATA/AppData/classmate/backup:/backup
+    environment:
+      TZ: Europe/Prague
+      KEEP_DAYS: "30"
+    # Každou noc: konzistentní kopie databáze přes sqlite3 .backup (za běhu aplikace) a klíče; starší než KEEP_DAYS se smažou.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache sqlite tzdata >/dev/null
+        echo "15 3 * * * /bin/sh /backup.sh" > /etc/crontabs/root
+        cat > /backup.sh <<'EOS'
+        set -e
+        d=$$(date +%Y-%m-%d)
+        mkdir -p /backup/$$d
+        sqlite3 /data/classmate.db ".backup /backup/$$d/classmate.db"
+        for f in .secret .vapid.json .fcm.json; do [ -f /data/$$f ] && cp /data/$$f /backup/$$d/ || true; done
+        tar -C /data -czf /backup/$$d/soubory.tar.gz --exclude=classmate.db --exclude=classmate.db-wal --exclude=classmate.db-shm . 2>/dev/null || true
+        find /backup -mindepth 1 -maxdepth 1 -type d -mtime +$${KEEP_DAYS:-30} -exec rm -rf {} +
+        echo "Záloha $$d hotová"
+        EOS
+        /bin/sh /backup.sh || echo "První záloha se nepovedla (databáze možná ještě neexistuje)."
+        exec crond -f -l 8
+    depends_on:
+      - app

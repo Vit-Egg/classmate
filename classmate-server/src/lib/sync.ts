@@ -7,6 +7,7 @@ import { all, get, run, tx } from "./db";
 import { addDays, mondayOf, pragueNow } from "./dates";
 import type { CacheResult, Hue, Timetable } from "./types";
 import type { User } from "./session";
+import { withPersonalChanges } from "./personal-calendar";
 
 const HUES: Hue[] = ["gray", "purple", "green", "amber", "blue"];
 const hueFor = (name: string) => HUES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
@@ -60,7 +61,7 @@ export function isoWeek(monday: string) {
 }
 
 /** Stálý rozvrh rozložený do konkrétního týdne: doplní data k dnům a vynechá hodiny jen pro sudý/lichý týden, které tento týden nejsou. */
-function weekOf(monday: string): Timetable {
+export function permanentWeek(monday: string): Timetable {
   const tt = permanentTimetable();
   const parity = isoWeek(monday) % 2 === 0 ? CYCLE_EVEN : CYCLE_ODD;
   return {
@@ -72,18 +73,21 @@ function weekOf(monday: string): Timetable {
 
 const result = (data: Timetable): CacheResult<Timetable> => ({ data, stale: false, fetchedAt: Date.now() });
 
-export async function getTimetable(_user: User, kind: TimetableKind, _force = false) {
-  return kind === "permanent" ? result(permanentTimetable()) : result(weekOf(weekMonday(kind)));
+/** Týden se změnami z osobního kalendáře uživatele (viz personal-calendar.ts); ty vidí jen on. */
+const personalWeek = (user: User, monday: string) => withPersonalChanges(user.id, permanentWeek(monday));
+
+export async function getTimetable(user: User, kind: TimetableKind, _force = false) {
+  return kind === "permanent" ? result(permanentTimetable()) : result(personalWeek(user, weekMonday(kind)));
 }
 
 /** Rozvrh týdne začínajícího daným pondělím (pro kalendář i „tento/příští týden“). */
-export async function getTimetableWeek(_user: User, monday: string, _force = false) {
-  return result(weekOf(monday));
+export async function getTimetableWeek(user: User, monday: string, _force = false) {
+  return result(personalWeek(user, monday));
 }
 
 /** Okamžitě, bez čekání – pro prvky, které nesmí zdržovat vykreslení stránky. */
-export function peekTimetable(_user: User, kind: TimetableKind): Timetable | null {
-  return kind === "permanent" ? permanentTimetable() : weekOf(weekMonday(kind));
+export function peekTimetable(user: User, kind: TimetableKind): Timetable | null {
+  return kind === "permanent" ? permanentTimetable() : personalWeek(user, weekMonday(kind));
 }
 
 /** Předměty a skupiny uživatele podle stálého rozvrhu. */

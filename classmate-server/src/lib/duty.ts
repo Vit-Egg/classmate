@@ -4,6 +4,7 @@
  * losuje už nové kolo. Týdny se losují dopředu na celé jedno kolo (aspoň aktuální a další tři) a po vylosování jsou pevné; přegenerovat je smí jen správce.
  */
 import { randomInt } from "node:crypto";
+import { can } from "./permissions";
 import { all, get, run, tx } from "./db";
 import { addDays, fmtShort, mondayOf, pragueNow } from "./dates";
 import { notify } from "./messages";
@@ -205,8 +206,8 @@ export function thisWeek(classId: number, now = pragueNow()): string[] {
 
 /* ---------- správce ---------- */
 
-const adminOnly = (user: Pick<User, "role">) => {
-  if (user.role !== "admin") fail("Tohle smí jen správce.");
+const adminOnly = (user: Pick<User, "role" | "is_owner" | "permissions">) => {
+  if (!can(user, "sluzby")) fail("Na služby nemáš oprávnění.");
 };
 
 export function adminSetDuty(admin: User, classId: number, enabled: boolean) {

@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { notFound } from "next/navigation";
+import { can } from "@/lib/permissions";
 import { rerollWeek, setExempt, setWeek, skipWeek } from "@/app/actions/sluzby";
 import { ConfirmButton } from "@/components/forms";
 import { all } from "@/lib/db";
@@ -19,7 +20,7 @@ export default async function DutyPage() {
   const weeks = schedule(user.class_id);
   const dayNames = await nameDayNames(pragueNow().date);
   const round = roundState(user.class_id);
-  const isAdmin = user.role === "admin";
+  const isAdmin = can(user, "sluzby");
   const current = weeks.find((w) => w.current);
   const upcoming = weeks.filter((w) => !w.current && w.start > (current?.start ?? ""));
   const past = weeks.filter((w) => w.start < (current?.start ?? "")).reverse();

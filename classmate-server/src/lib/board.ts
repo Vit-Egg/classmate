@@ -4,6 +4,7 @@
  * Proti zahlcení: omezený počet příspěvků a komentářů na den a velikost textů.
  */
 import { all, get, run, tx } from "./db";
+import { can } from "./permissions";
 import { audit, classTarget } from "./audit";
 import { notify } from "./messages";
 import { layout } from "./email-notify";
@@ -156,14 +157,14 @@ export function savePost(user: User, input: PostInput) {
   const link = safeLink(clean(input.link, 500));
   const expires = input.expires && goodDate(input.expires) ? input.expires : null;
   if (expires && expires < pragueNow().date) fail("Datum „platí do“ nesmí být v minulosti.");
-  const pinned = user.role === "admin" && input.pinned ? 1 : 0;
+  const pinned = can(user, "nastenka") && input.pinned ? 1 : 0;
 
   if (input.id) {
     const p = get<{ user_id: number; poll: number }>("SELECT user_id, poll FROM board_posts WHERE id = ? AND class_id = ?", input.id, user.class_id);
     if (!p) return fail("Příspěvek už neexistuje.");
-    if (p.user_id !== user.id && user.role !== "admin") fail("Tenhle příspěvek upravit nemůžeš.");
+    if (p.user_id !== user.id && !can(user, "moderace")) fail("Tenhle příspěvek upravit nemůžeš.");
     run("UPDATE board_posts SET category = ?, title = ?, body = ?, link = ?, expires = ?, updated_at = ? WHERE id = ?", category, title, body, link, expires, Date.now(), input.id);
-    if (user.role === "admin") run("UPDATE board_posts SET pinned = ? WHERE id = ?", pinned, input.id);
+    if (can(user, "nastenka")) run("UPDATE board_posts SET pinned = ? WHERE id = ?", pinned, input.id);
     return input.id;
   }
 
@@ -201,13 +202,13 @@ export function savePost(user: User, input: PostInput) {
 export function deletePost(user: User, id: number) {
   const p = get<{ user_id: number; title: string }>("SELECT user_id, title FROM board_posts WHERE id = ? AND class_id = ?", id, user.class_id);
   if (!p) return;
-  if (p.user_id !== user.id && user.role !== "admin") fail("Tenhle příspěvek smazat nemůžeš.");
+  if (p.user_id !== user.id && !can(user, "moderace")) fail("Tenhle příspěvek smazat nemůžeš.");
   run("DELETE FROM board_posts WHERE id = ?", id);
   if (p.user_id !== user.id) audit(user, "module_change", { target: classTarget(user.class_id), detail: `Nástěnka: smazán příspěvek „${p.title.slice(0, 60)}“` });
 }
 
 export function setPinned(user: User, id: number, pinned: boolean) {
-  if (user.role !== "admin") fail("Připnout smí jen správce.");
+  if (!can(user, "nastenka")) fail("Připnout smí jen správce s oprávněním k nástěnce.");
   run("UPDATE board_posts SET pinned = ? WHERE id = ? AND class_id = ?", pinned ? 1 : 0, id, user.class_id);
 }
 
@@ -243,12 +244,12 @@ export function addComment(user: User, postId: number, text: string) {
 export function deleteComment(user: User, id: number) {
   const c = get<{ user_id: number; post_id: number }>("SELECT c.user_id, c.post_id FROM board_comments c JOIN board_posts p ON p.id = c.post_id WHERE c.id = ? AND p.class_id = ?", id, user.class_id);
   if (!c) return;
-  if (c.user_id !== user.id && user.role !== "admin") fail("Tenhle komentář smazat nemůžeš.");
+  if (c.user_id !== user.id && !can(user, "moderace")) fail("Tenhle komentář smazat nemůžeš.");
   run("DELETE FROM board_comments WHERE id = ?", id);
 }
 
 export function adminSetBoard(admin: User, classId: number, enabled: boolean) {
-  if (admin.role !== "admin") fail("Tohle smí jen správce.");
+  if (!admin.is_owner) fail("Tohle smí jen vlastník serveru.");
   if (!get("SELECT 1 FROM classes WHERE id = ?", classId)) fail("Třída neexistuje.");
   run("UPDATE classes SET board_enabled = ? WHERE id = ?", enabled ? 1 : 0, classId);
   audit(admin, "module_change", { target: classTarget(classId), detail: `Nástěnka třídy ${enabled ? "zapnuta" : "vypnuta"}` });

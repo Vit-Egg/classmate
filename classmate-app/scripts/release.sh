@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# Vydání nové verze aplikace mimo Google Play: postaví podepsané APK a zveřejní ho na webu (classmate-landing).
+# Vydání nové verze aplikace (APK mimo Google Play): postaví podepsané APK a zveřejní ho na serveru třídy.
 #
 #   scripts/release.sh [--push] "Co je nového 1" "Co je nového 2" ...
 #
-# - zapíše public/app/Classmate.apk a public/app/latest.json do repozitáře classmate-landing (vedle tohoto repozitáře,
-#   nebo podle CLASSMATE_LANDING). Stránka classmate.cz/aplikace i upozornění v aplikaci čtou právě tyhle dva soubory.
+# - zapíše public/app/Classmate.apk a public/app/latest.json do classmate-server (vedle této složky, nebo podle CLASSMATE_SERVER).
+#   Upozornění na novou verzi v aplikaci čte právě latest.json; soubory se dostanou na server s dalším Docker obrazem.
 # - texty „Co je nového“ jsou povinné: uživatel je uvidí v upozornění na novou verzi. Piš je pravdivě a lidsky.
-# - s --push se změna v landingu rovnou commitne a pushne (Docker obraz webu se pak sestaví na GitHubu).
+# - s --push se změna rovnou commitne a pushne (Docker obraz se pak sestaví na GitHubu).
 # Číslo verze = počet commitů tohoto repozitáře, proto nejdřív commitni změny aplikace a až pak vydávej.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
-LANDING="${CLASSMATE_LANDING:-$ROOT/../classmate-landing}"
+LANDING="${CLASSMATE_SERVER:-$ROOT/../classmate-server}"
 SITE="${CLASSMATE_SITE:-https://classmate.cz}"
 PUSH=0
 if [[ "${1:-}" == "--push" ]]; then PUSH=1; shift; fi
 
 [[ $# -ge 1 ]] || { echo "Chybí texty „Co je nového“ (aspoň jeden argument)." >&2; exit 1; }
-[[ -d "$LANDING/public" ]] || { echo "Nenašel jsem classmate-landing: $LANDING (nastav CLASSMATE_LANDING)." >&2; exit 1; }
+[[ -d "$LANDING/public" ]] || { echo "Nenašel jsem classmate-server: $LANDING (nastav CLASSMATE_SERVER)." >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "V tomto repozitáři jsou necommitnuté změny. Commitni je, ať číslo verze sedí." >&2; exit 1; }
 [[ -f android/keystore.properties ]] || { echo "Chybí android/keystore.properties (podpisový klíč), APK by nebylo podepsané." >&2; exit 1; }
 
@@ -63,7 +63,7 @@ if [[ $PUSH -eq 1 ]]; then
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
   git -C "$LANDING" push -q origin main
-  echo "  Zveřejněno: commit v classmate-landing pushnutý, počkej na sestavení obrazu webu (~5 min)."
+  echo "  Zveřejněno: commit pushnutý, počkej na sestavení Docker obrazu (~5 min) a aktualizuj server."
 else
   echo "  Zbývá commitnout public/app v $LANDING a pushnout (nebo spustit znovu s --push)."
 fi

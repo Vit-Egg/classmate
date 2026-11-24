@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ReportButton } from "@/components/ReportButton";
+import { can } from "@/lib/permissions";
 import { startTimes } from "@/lib/starttime";
 import { aiEnabled } from "@/lib/ai";
 import { Clamp } from "@/components/Clamp";
@@ -71,10 +72,10 @@ export default async function TestsPage({ searchParams }: { searchParams: Promis
         </div>
         {t.topic && <Clamp text={t.topic} />}
       </div>
-      {(study || t.created_by === user.id || user.role === "admin") && (
+      {(study || t.created_by === user.id || can(user, "moderace")) && (
         <div className="item-actions">
           {study && <Link href={`/studium/${t.id}`} className="icon-btn" style={{ color: "var(--muted)" }} aria-label="Učit se na test nebo zkoušení" title="Učit se na test nebo zkoušení"><Icon name="cap" size={16} /></Link>}
-          {(t.created_by === user.id || user.role === "admin") && <>
+          {(t.created_by === user.id || can(user, "moderace")) && <>
           <EditItemDialog item={{ kind: "test", id: t.id, subject: t.subject_name, date: t.date, topic: t.topic, makeup: !!t.makeup, oral: !!t.oral, days: options.find((o) => o.name === t.subject_name)?.days ?? [] }} action={updateTest} autoOpen={editId === t.id} />
           <form action={deleteTest}>
             <input type="hidden" name="id" value={t.id} />
@@ -120,7 +121,7 @@ export default async function TestsPage({ searchParams }: { searchParams: Promis
                     </div>
                     {t.topic && <Clamp text={t.topic} />}
                   </div>
-                  {(t.created_by === user.id || user.role === "admin") && (
+                  {(t.created_by === user.id || can(user, "moderace")) && (
                     <div className="item-actions">
                       <form action={deleteTest}>
                         <input type="hidden" name="id" value={t.id} />

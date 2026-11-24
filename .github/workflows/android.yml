@@ -1,17 +1,19 @@
-# Kontrola Androidu při každém pushi: sestaví se ladicí i vydané APK a spustí lint.
+# Kontrola Android aplikace: sestaví ladicí APK a spustí lint. APK je ke stažení v artefaktech běhu.
 name: Android
 
 on:
   push:
     branches: [main]
+    paths: ["classmate-app/**", ".github/workflows/android.yml"]
   pull_request:
+    paths: ["classmate-app/**", ".github/workflows/android.yml"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: android
+        working-directory: classmate-app/android
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,8 +23,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew assembleDebug assembleRelease lintDebug
+      - run: ./gradlew assembleDebug lintDebug
       - uses: actions/upload-artifact@v4
         with:
           name: classmate-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: classmate-app/android/app/build/outputs/apk/debug/*.apk

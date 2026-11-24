@@ -13,11 +13,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Na GitHubu (dost paměti) se sestavuje normálně, včetně minifikace. Na malém serveru (2 GB RAM) padá build na paměti:
 # tam spusť docker compose build --build-arg LOW_MEMORY=1 (bez minifikace a kontrol typů, soubory jsou větší).
 ARG LOW_MEMORY=0
+# verze aplikace (počet commitů, hash, datum); bez nich se ukáže v0
+ARG BUILD_COUNT=
+ARG BUILD_SHA=
+ARG BUILD_DATE=
+ENV BUILD_COUNT=$BUILD_COUNT BUILD_SHA=$BUILD_SHA BUILD_DATE=$BUILD_DATE
 RUN if [ "$LOW_MEMORY" = "1" ]; then export SKIP_CHECKS=1 NO_MINIFY=1 NODE_OPTIONS=--max-old-space-size=1536; fi && npm run build
 
 FROM node:22.23.4-bookworm-slim AS run
 # propojí balíček na ghcr.io s repozitářem (zdědí jeho oprávnění a jde k němu jednoduše přiřadit přístup)
-LABEL org.opencontainers.image.source="https://github.com/classmatecz/classmate-server"
+LABEL org.opencontainers.image.source="https://github.com/Vit-Egg/classmate"
 WORKDIR /app
 # UV_THREADPOOL_SIZE: scrypt (hesla) a práce se soubory běží ve vláknech, při dávce přihlášení by 4 výchozí vlákna nestačila
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000 DATA_DIR=/data UV_THREADPOOL_SIZE=8

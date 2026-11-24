@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 import { permanentTimetable, CYCLE_EVEN, CYCLE_ODD } from "@/lib/sync";
 import { TimetableEditor, type EditorInitial } from "@/components/TimetableEditor";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** Správa → Rozvrh: stálý týdenní rozvrh třídy, ze kterého berou data Dnes, Rozvrh, Kalendář, Předměty i widgety. */
 export default async function TimetableAdminPage() {
-  await requireAdmin();
+  await requirePermission("rozvrh");
   const tt = permanentTimetable();
   const initial: EditorInitial = {
     hours: tt.hours,

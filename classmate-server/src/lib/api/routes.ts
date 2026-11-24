@@ -25,9 +25,6 @@ export const ROUTES: Route[] = [
   r("Testy a zkoušení", "PATCH", "/tests/:test_id", "update_test"),
   r("Testy a zkoušení", "DELETE", "/tests/:test_id", "delete_test"),
 
-  r("Známky a absence", "GET", "/marks", "get_marks"),
-  r("Známky a absence", "GET", "/absences", "get_absences"),
-  r("Známky a absence", "PUT", "/settings/marks-sharing", "set_marks_sharing"),
 
   r("Poznámky", "GET", "/notes", "list_notes"),
   r("Poznámky", "POST", "/notes", "create_note"),
@@ -63,15 +60,9 @@ export const ROUTES: Route[] = [
   r("Zprávy", "DELETE", "/messages/:message_id", "delete_messages"),
   r("Zprávy", "PUT", "/messages/categories/:category", "set_message_category"),
 
-  r("Komens", "GET", "/komens", "list_komens"),
-  r("Komens", "GET", "/komens/types", "get_komens_types"),
-  r("Komens", "POST", "/komens", "send_komens"),
-  r("Komens", "GET", "/komens/:message_id", "get_komens_message"),
 
   r("Spolužáci", "GET", "/classmates", "list_classmates"),
   r("Služby", "GET", "/duty", "get_duty"),
-  r("Obědy", "GET", "/lunch", "get_lunch_menu"),
-  r("Obědy", "POST", "/lunch/order", "order_lunch"),
 
   r("Pokladna", "GET", "/cash", "get_cash"),
   r("Pokladna", "POST", "/cash/requests", "create_cash_request"),
@@ -108,7 +99,6 @@ export const ROUTES: Route[] = [
   r("Účet a nastavení", "PUT", "/settings/share-all-notes", "set_share_all_notes"),
   r("Účet a nastavení", "PUT", "/settings/note-title-template", "set_note_title_template"),
   r("Účet a nastavení", "PUT", "/settings/preferences/:key", "set_preference"),
-  r("Synchronizace", "POST", "/sync", "sync_now"),
   r("Synchronizace", "POST", "/todoist/sync", "sync_todoist"),
   r("Synchronizace", "DELETE", "/todoist", "disconnect_todoist"),
 ];

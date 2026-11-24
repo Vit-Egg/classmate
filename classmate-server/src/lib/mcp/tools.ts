@@ -1,6 +1,6 @@
 /**
  * Nástroje MCP. Každý odpovídá jedné věci, kterou uživatel dělá v aplikaci; logiku sdílí přes lib/services.ts.
- * Nejsou tu záměrně nástroje vyžadující heslo (změna e-mailu, 2FA, připojení Bakalářů, smazání účtu) –
+ * Nejsou tu záměrně nástroje vyžadující heslo (změna e-mailu, 2FA, smazání účtu) –
  * ty zůstávají jen člověku.
  */
 import { z } from "zod";
@@ -11,7 +11,6 @@ import { buildSlots, dayState, fmtMin } from "../schedule";
 import { getTimetable, subjectGroups, userGroups, userSubjects, type TimetableKind } from "../sync";
 import { listTasks, listTests, subjectHues } from "../content";
 import { isSelfStudy, roomText } from "../selfstudy";
-import { markStats } from "../stats";
 import { subjectDetail } from "../subjects";
 import { ALL_KINDS, calendarEvents, type CalKind } from "../calendar";
 import { listMessages, markRead, unreadCount, type Category } from "../messages";
@@ -90,7 +89,7 @@ export const tools: Tool[] = [
     annotations: read,
     async run(user, a: { week: TimetableKind }) {
       const tt = await getTimetable(user, a.week);
-      if (!tt.data) return { error: tt.error === "disconnected" ? "Bakaláři nejsou propojené, uživatel je musí propojit v Nastavení." : "Bakaláři teď neodpovídají." };
+      if (!tt.data) return { error: "Rozvrh zatím není zadaný." };
       const hr = hours(tt.data);
       const names = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek"];
       return {
@@ -402,18 +401,18 @@ export const tools: Tool[] = [
   {
     name: "get_profile",
     title: "Můj účet",
-    description: "Jméno, e-mail, škola a třída, stav 2FA a propojení s Bakaláři.",
+    description: "Jméno, e-mail, škola a třída a stav 2FA.",
     schema: z.object({}),
     annotations: read,
     run: (user) => ({
       name: user.name, email: user.email, school: user.school_name, class: user.class_name, role: user.role,
-      twoFactorEnabled: !!user.totp_enabled, shareAllNotes: !!user.share_notes, bakalariConnected: !!user.bakalari_refresh_enc, lastSync: user.last_sync_at ? new Date(user.last_sync_at).toISOString() : null,
+      twoFactorEnabled: !!user.totp_enabled, shareAllNotes: !!user.share_notes,
     }),
   },
   {
     name: "export_my_data",
     title: "Export mých dat",
-    description: "Všechna data, která o uživateli aplikace drží (jako tlačítko Stáhnout moje data): účet, poznámky, zadané úkoly, testy a zkoušení, přihlášení a uložená data z Bakalářů.",
+    description: "Všechna data, která o uživateli aplikace drží (jako tlačítko Stáhnout moje data): účet, poznámky, zadané úkoly, testy a zkoušení, přihlášení a nastavení.",
     schema: z.object({}),
     annotations: read,
     run: (user) => ({
@@ -427,10 +426,7 @@ export const tools: Tool[] = [
   /* ---- správa: jen pro správce ---- */
   { name: "admin_overview", title: "Správa: přehled", description: "Počty, školy a třídy (stránka Správa). Jen správce.", schema: z.object({}), annotations: read, admin: true, run: (u) => svc.adminOverview(u) },
   { name: "admin_list_users", title: "Správa: uživatelé", description: "Seznam uživatelů, lze hledat podle jména, e-mailu, třídy nebo školy. Jen správce.", schema: z.object({ query: z.string().max(100).optional() }), annotations: read, admin: true, run: (u, a) => ({ users: svc.adminUsers(u, a.query) }) },
-  { name: "admin_add_class", title: "Správa: nová třída", description: "Přidá třídu do školy. Jen správce.", schema: z.object({ school_id: id("školy"), name: z.string().min(1).max(40) }), annotations: write, admin: true, run: (u, a) => (svc.adminAddClass(u, a.school_id, a.name), { added: true }) },
   { name: "admin_rename_class", title: "Správa: přejmenovat třídu", description: "Jen správce.", schema: z.object({ class_id: id("třídy"), name: z.string().min(1).max(40) }), annotations: { ...write, idempotentHint: true }, admin: true, run: (u, a) => (svc.adminRenameClass(u, a.class_id, a.name), { renamed: true }) },
-  { name: "admin_delete_class", title: "Správa: smazat třídu", description: "Smaže třídu bez uživatelů. Jen správce.", schema: z.object({ class_id: id("třídy") }), annotations: destroy, admin: true, run: (u, a) => (svc.adminDeleteClass(u, a.class_id), { deleted: true }) },
-  { name: "admin_move_user", title: "Správa: přesunout uživatele", description: "Přesune uživatele do jiné třídy (smaže mu uložené předměty a cache, načtou se znovu). Jen správce.", schema: z.object({ user_id: id("uživatele"), class_id: id("cílové třídy") }), annotations: write, admin: true, run: (u, a) => (svc.adminMoveUser(u, a.user_id, a.class_id), { moved: true }) },
   { name: "admin_sign_out_user", title: "Správa: odhlásit uživatele", description: "Ukončí všechna přihlášení uživatele včetně připojených AI aplikací. Jen správce.", schema: z.object({ user_id: id("uživatele") }), annotations: write, admin: true, run: (u, a) => (svc.adminSignOutUser(u, a.user_id), { signedOut: true }) },
   { name: "admin_reset_user_2fa", title: "Správa: vypnout 2FA uživateli", description: "Vypne uživateli dvoufázové ověření. Jen správce.", schema: z.object({ user_id: id("uživatele") }), annotations: destroy, admin: true, run: (u, a) => (svc.adminResetTotp(u, a.user_id), { reset: true }) },
   { name: "admin_set_user_admin", title: "Správa: role správce", description: "Jmenuje uživatele správcem, nebo mu roli odebere. Sobě roli měnit nejde. Jen správce.", schema: z.object({ user_id: id("uživatele"), admin: z.boolean() }), annotations: { ...write, idempotentHint: true }, admin: true, run: (u, a) => (svc.adminToggleAdmin(u, a.user_id, a.admin), { admin: a.admin }) },

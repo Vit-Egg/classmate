@@ -16,7 +16,7 @@ Typy zkontroluješ příkazem `npm run typecheck` a produkční sestavení vyrob
 
 ## Provoz
 
-- Docker: `docker compose up -d` (viz `docker-compose.yml` a [DEPLOY.md](DEPLOY.md)). Některé části DEPLOY.md ještě popisují původní verzi s Bakaláři, ty se teď nepoužívají.
+- Nasazení na CasaOS i na server s veřejnou IP, zálohy a aktualizace popisuje [DEPLOY.md](DEPLOY.md).
 - Nastav `APP_SECRET` a zálohuj složku `DATA_DIR` (databáze, `data/.secret`, klíče VAPID). Bez `.secret` nejdou rozšifrovat uložené klíče.
 - Provozuj aplikaci za HTTPS, protože cookies jsou `secure`. V LAN přes http nastav `COOKIE_SECURE=false`.
 - `PUBLIC_URL` musí mířit na veřejnou adresu, jinak budou odkazy v pozvánkách a e-mailech špatně.
@@ -28,6 +28,8 @@ Typy zkontroluješ příkazem `npm run typecheck` a produkční sestavení vyrob
 - **Rozvrh:** stálý týdenní rozvrh zadává správce v editoru (Správa → Rozvrh třídy, `src/components/TimetableEditor.tsx`). Editor umí zvonění, předměty, skupiny a hodiny jen pro sudý nebo lichý týden. Rozvrh se ukládá do `app_settings` a obrazovky ho čtou přes `src/lib/sync.ts`.
 - **Databáze:** SQLite (`better-sqlite3`, WAL) v `DATA_DIR`. Schéma se mění jen přidáním migrace do `src/lib/migrations.ts`.
 - **Bezpečnost:** hesla jsou hashovaná přes scrypt. Relace je náhodný token v httpOnly cookie a v databázi je jen jeho hash. Dvoufázové ověření používá TOTP a záložní kódy. Ochrana proti CSRF je v `src/middleware.ts`.
+- **Role:** vlastník serveru smí všechno a jako jediný jmenuje správce. Správcům zaškrtává oprávnění: členové a pozvánky, rozvrh, pokladna, služby, nástěnka, moderace, audit (`src/lib/permissions.ts`).
+- **Osobní kalendář:** každý si v Nastavení může vložit adresu svého ICS kalendáře. Změny proti stálému rozvrhu (odpadlé hodiny, suplování, jiná učebna) pak vidí jen on (`src/lib/personal-calendar.ts`).
 - **MCP a API:** aplikace je zároveň MCP server (`/mcp`, OAuth 2.1 + PKCE) a má REST API v1. AI asistent smí dělat jen to, co uživatel v aplikaci (`src/lib/mcp/`, `src/lib/services.ts`).
 - **Oznámení:** Web Push (klíče VAPID se vygenerují do `data/.vapid.json`) a push do Android aplikace přes Firebase (`/data/.fcm.json`, volitelné).
 - **PWA:** aplikaci jde nainstalovat na plochu a funguje offline (`public/sw.js`).

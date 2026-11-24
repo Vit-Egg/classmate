@@ -9,7 +9,7 @@ import { all, get } from "./db";
 import { dataDir } from "./paths";
 import { diskFree, diskTotal } from "./disk";
 import { pragueNow } from "./dates";
-import { allBkStats, processStartedAt, syncStat } from "./metrics";
+import { processStartedAt } from "./metrics";
 
 const DAY = 86_400_000;
 const REAL_U = "(SELECT id FROM users WHERE placeholder = 0 AND demo = 0)";
@@ -300,8 +300,6 @@ export function adminStats() {
   const system = safe(() => {
     const mem = process.memoryUsage();
     const tables = ["users", "sessions", "notes", "note_versions", "note_ydocs", "tasks", "tests", "messages", "cache", "stat_marks", "audit_log", "usage_daily", "usage_hourly", "rate_limits", "custom_events"];
-    const bk = allBkStats();
-    const sync = syncStat();
     return {
       uptimeMs: now - processStartedAt(),
       rss: mem.rss,
@@ -317,8 +315,6 @@ export function adminStats() {
       audit: n("SELECT COUNT(*) n FROM audit_log"),
       inquiries: { total: n("SELECT COUNT(*) n FROM inquiries"), open: n("SELECT COUNT(*) n FROM inquiries WHERE handled_at IS NULL") },
       messages: { total: n(`SELECT COUNT(*) n FROM messages WHERE user_id IN ${REAL_U}`), read: n(`SELECT COUNT(*) n FROM messages WHERE read_at IS NOT NULL AND user_id IN ${REAL_U}`), emailed: n(`SELECT COUNT(*) n FROM messages WHERE emailed_at IS NOT NULL AND user_id IN ${REAL_U}`), pushed: n(`SELECT COUNT(*) n FROM messages WHERE pushed_at IS NOT NULL AND user_id IN ${REAL_U}`) },
-      bakalari: { schools: bk.length, down: bk.filter(([, s]) => s.openUntil > now).length, ok: bk.reduce((a, [, s]) => a + s.ok, 0), fail: bk.reduce((a, [, s]) => a + s.fail, 0) },
-      sync: { lastEnd: sync.lastEnd, durationMs: sync.durationMs, users: sync.users, failed: sync.failed },
       rowCounts: tables.map((t) => ({ label: t, value: n(`SELECT COUNT(*) n FROM ${t}`) })).sort((a, b) => b.value - a.value) as Bar[],
       auditActions: rows<{ label: string; value: number }>("SELECT action label, COUNT(*) value FROM audit_log GROUP BY action ORDER BY value DESC LIMIT 10") as Bar[],
     };

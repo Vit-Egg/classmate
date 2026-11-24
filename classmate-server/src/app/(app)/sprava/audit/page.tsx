@@ -3,7 +3,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { LiveSearch } from "@/components/LiveSearch";
 import { AUDIT_ACTIONS, AUDIT_CATEGORIES, auditCount, listAudit, retentionDays, type AuditAction, type AuditCategory } from "@/lib/audit";
 import { fmtDateTime } from "@/lib/dates";
-import { requireAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 
 export const metadata = { title: "Audit log" };
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const CATS = new Set<string>(AUDIT_CATEGORIES.map((c) => c.id));
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ q?: string; k?: string; a?: string; u?: string; pred?: string }> }) {
-  await requireAdmin();
+  await requirePermission("audit");
   const sp = await searchParams;
   const cat = CATS.has(sp.k ?? "") ? (sp.k as AuditCategory) : "";
   const user = Number(sp.u) > 0 ? Number(sp.u) : undefined;

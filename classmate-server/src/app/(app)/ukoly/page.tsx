@@ -1,5 +1,6 @@
 import { Clamp } from "@/components/Clamp";
 import { ReportButton } from "@/components/ReportButton";
+import { can } from "@/lib/permissions";
 import { credit } from "@/lib/credit";
 import Link from "next/link";
 import { createTask, deleteTask, updateTask } from "@/app/actions/content";
@@ -57,7 +58,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         <div className="card rows split">
           {tasks.map((t) => {
             const days = t.due_date ? diffDays(today, t.due_date) : null;
-            const canDelete = t.created_by === user.id || user.role === "admin";
+            const canDelete = t.created_by === user.id || can(user, "moderace");
             return (
               <div key={t.id} className={`item${t.done ? " is-done" : ""}`}>
                 <TaskCheck id={t.id} done={!!t.done} />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { can } from "@/lib/permissions";
 import { Avatar } from "@/components/Avatar";
 import { BoardCommentForm } from "@/components/BoardCommentForm";
 import { BoardCompose } from "@/components/BoardCompose";
@@ -126,7 +127,7 @@ export default async function BoardPage({ searchParams }: { searchParams: Promis
   const archive = sp.v === "archiv";
   const posts = listPosts(user, { cat, archive });
   const counts = boardCounts(user);
-  const isAdmin = user.role === "admin";
+  const isAdmin = can(user, "nastenka");
   const cats = BOARD_CATS.map((c) => ({ id: c.id, label: c.label, hint: c.hint }));
   const href = (k?: string, v?: string) => {
     const q = new URLSearchParams();

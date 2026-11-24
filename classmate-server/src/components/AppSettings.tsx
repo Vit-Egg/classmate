@@ -133,9 +133,7 @@ const WIDGETS: { id: string; name: string; hint: string }[] = [
   { id: "timetable", name: "Rozvrh dnes", hint: "Dnešní hodiny s učebnou a suplováním, probíhající hodina je zvýrazněná. Po škole ukáže zítřek." },
   { id: "tasks", name: "Úkoly", hint: "Nejbližší otevřené úkoly podle termínu a barvy předmětu." },
   { id: "tests", name: "Testy a zkoušení", hint: "Nejbližší testy a zkoušení s odpočtem dnů." },
-  { id: "marks", name: "Známky", hint: "Poslední známky. Jsou vidět všem, kdo se na plochu podívají." },
-  { id: "lunch", name: "Oběd", hint: "Dnešní oběd ze Strava.cz, po 14. hodině následující den." },
-  { id: "shortcuts", name: "Zkratky", hint: "Rychlé otevření rozvrhu, úkolů, testů a zkoušení, známek a poznámek." },
+  { id: "shortcuts", name: "Zkratky", hint: "Rychlé otevření rozvrhu, úkolů, testů a zkoušení a poznámek." },
 ];
 
 /** Widgety na plochu: tlačítko „Přidat“ nabídne přidání přímo (launcher se zeptá). Seznam je ve webu, takže ho jde doplnit bez nové verze aplikace. */

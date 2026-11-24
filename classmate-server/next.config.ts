@@ -5,6 +5,8 @@ import { buildCsp } from "./src/lib/csp";
 
 /** Verze aplikace = počet commitů, krátký hash a datum posledního commitu (z gitu při buildu). */
 function buildInfo() {
+  // v Dockeru git není (repozitář je o složku výš): verzi pak předá sestavení přes BUILD_COUNT, BUILD_SHA a BUILD_DATE
+  if (process.env.BUILD_COUNT) return { n: Number(process.env.BUILD_COUNT), sha: process.env.BUILD_SHA ?? "", date: process.env.BUILD_DATE ?? "" };
   const git = (args: string) => execSync(`git ${args}`, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
   try {
     return { n: Number(git("rev-list --count HEAD")), sha: git("rev-parse --short HEAD"), date: git("log -1 --format=%cI") };

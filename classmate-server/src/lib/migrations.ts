@@ -1206,4 +1206,28 @@ CREATE TABLE IF NOT EXISTS invites (
 CREATE INDEX IF NOT EXISTS invites_user ON invites (user_id);
 `,
   },
+  {
+    id: 76,
+    sql: `
+-- Role správců: vlastník serveru (smí všechno) a správci s vybranými oprávněními (seznam oddělený čárkou).
+ALTER TABLE users ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT '';
+UPDATE users SET is_owner = 1 WHERE id = (SELECT id FROM users WHERE role = 'admin' AND placeholder = 0 ORDER BY created_at, id LIMIT 1);
+UPDATE users SET permissions = 'clenove,rozvrh,pokladna,sluzby,nastenka,moderace,audit' WHERE role = 'admin';
+`,
+  },
+  {
+    id: 77,
+    sql: `
+-- Osobní kalendář (ICS) uživatele: šifrovaná adresa a poslední stažené události (jen na pár týdnů okolo dneška).
+CREATE TABLE IF NOT EXISTS user_calendars (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  url_enc TEXT NOT NULL,
+  events_json TEXT,
+  last_ok_at INTEGER,
+  last_try_at INTEGER,
+  error TEXT
+);
+`,
+  },
 ];

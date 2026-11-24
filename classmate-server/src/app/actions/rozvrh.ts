@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 import { savePermanentTimetable, CYCLE_EVEN, CYCLE_ODD } from "@/lib/sync";
 import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/action";
@@ -33,7 +33,7 @@ const Input = z.object({
 
 /** Správa → Rozvrh: uloží stálý rozvrh třídy (zvonění, předměty, skupiny a hodiny) a přepočítá předměty a skupiny všech členů. */
 export async function saveTimetableAction(raw: unknown): Promise<ActionState> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("rozvrh");
   const r = Input.safeParse(raw);
   if (!r.success) return { error: r.error.issues[0].message };
   const v = r.data;

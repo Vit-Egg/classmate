@@ -444,6 +444,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="section" style={{ marginBottom: 12 }}>Poděkování</h2>
           <div className="card card-pad thanks">
             <ul>
+              <li><b>Šimonu Plojharovi</b> (<a href="https://plojharsim.cz" target="_blank" rel="noopener" className="link-u">plojharsim.cz</a>) za vytvoření původního Classmate a poskytnutí jeho kódu</li>
               <li><b>Romanu Matsunychovi</b> (<a href="https://rome-prjcts.xo.je" target="_blank" rel="noopener" className="link-u">rome-prjcts.xo.je</a>) za vymyšlení názvu Classmate, vymýšlení nových funkcí a hledání bugů</li>
               <li><b>Jánu Gornyitzkému</b> za podporu při tvorbě a návrhu hromady nápadů</li>
               <li><b>Vítu Ouhrabkovi</b> (<a href="https://vitegg.com" target="_blank" rel="noopener" className="link-u">vitegg.com</a>) za návrhy nových funkcí a návrh tréninkového deníku</li>

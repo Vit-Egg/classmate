@@ -52,6 +52,6 @@ Chyby a nápady hlas přes [Issues](https://github.com/Vit-Egg/classmate/issues)
 
 ## Autoři a licence
 
-Classmate původně vytvořil **plojharsim**. Tuhle verzi pro jednu třídu upravuje a udržuje **vitegg**.
+Classmate původně vytvořil **Šimon Plojhar** ([plojharsim.cz](https://plojharsim.cz)). Děkujeme mu za poskytnutí kódu původního Classmate. Tuhle verzi pro jednu třídu upravuje a udržuje **vitegg**.
 
 Zveřejněno pod licencí [MIT](LICENSE).

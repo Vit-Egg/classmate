@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barvy zrcadlí tokeny ve webové aplikaci (src/app/globals.css v classmate-server), světlá varianta. -->
+<resources>
+    <color name="bg">#f4f2ee</color>
+    <color name="surface">#ffffff</color>
+    <color name="surface2">#eceae5</color>
+    <color name="text">#16181b</color>
+    <color name="muted">#6b6f76</color>
+    <color name="accent">#0e7c56</color>
+    <color name="accent_ink">#ffffff</color>
+    <color name="accent_soft">#dcf2e8</color>
+    <color name="danger">#d6402c</color>
+    <color name="icon_background">#4ae0a0</color>
+    <color name="icon_glyph">#04251a</color>
+    <color name="h_gray">#6c7480</color>
+    <color name="h_purple">#7d4a8c</color>
+    <color name="h_green">#4a8a58</color>
+    <color name="h_amber">#c08a0a</color>
+    <color name="h_blue">#2f7ea6</color>
+    <color name="warn">#a8680a</color>
+</resources>

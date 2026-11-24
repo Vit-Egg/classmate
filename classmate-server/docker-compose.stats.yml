@@ -1,0 +1,43 @@
+# Vlastní statistika návštěvnosti (Umami): běží vedle Classmate, bez cookies, data zůstávají na tvém serveru.
+# Spuštění: v .env nastav STATS_DB_PASSWORD a STATS_SECRET, pak: docker compose -f docker-compose.stats.yml up -d
+# Cloudflare Tunnel: public hostname (např. stats.classmate.cz) na http://IP-serveru:3002. Postup je v DEPLOY.md.
+name: classmate-stats
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${STATS_DB_PASSWORD:?Nastav STATS_DB_PASSWORD v .env}@db:5432/umami
+      APP_SECRET: ${STATS_SECRET:?Nastav STATS_SECRET v .env (openssl rand -base64 32)}
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3002:3000"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    security_opt:
+      - no-new-privileges:true
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${STATS_DB_PASSWORD:?Nastav STATS_DB_PASSWORD v .env}
+    volumes:
+      - classmate-stats-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  classmate-stats-db:
+    name: classmate-stats-db

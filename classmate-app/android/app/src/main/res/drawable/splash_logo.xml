@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo na úvodní obrazovce: stejná kresba pro systémové logo (windowSplashScreenAnimatedIcon) i pro vlastní překrytí v aplikaci,
+     aby se mezi nimi nic neposouvalo. Viewport 108 jako adaptivní ikona, logo uprostřed. Musí se vejít do kruhu o 2/3 šířky (192dp), do kterého systém ikonu ořezává, jinak má oříznuté rohy.. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/icon_background"
+        android:pathData="M39.94,25.875H68.06A14.06,14.06 0 0 1 82.125,39.94V68.06A14.06,14.06 0 0 1 68.06,82.125H39.94A14.06,14.06 0 0 1 25.875,68.06V39.94A14.06,14.06 0 0 1 39.94,25.875Z" />
+    <path
+        android:pathData="M63.85,45.56A13.62,13.62 0 1 0 63.85,62.45"
+        android:strokeColor="@color/icon_glyph"
+        android:strokeWidth="8.35"
+        android:strokeLineCap="butt" />
+</vector>

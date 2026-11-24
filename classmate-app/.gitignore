@@ -1,0 +1,19 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+# tajemství, která do repozitáře nepatří
+google-services.json
+keystore.properties
+# macOS / Xcode
+.DS_Store
+xcuserdata/
+DerivedData/

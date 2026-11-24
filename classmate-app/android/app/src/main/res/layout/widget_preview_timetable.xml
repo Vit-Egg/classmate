@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Společné rozvržení seznamových widgetů (rozvrh, úkoly, testy a zkoušení, známky, oběd). Řádky se plní z kódu (live/Widgets.kt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
+
+        <TextView
+            android:id="@+id/w_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:text="Dnes · čtvrtek" />
+
+        <TextView
+            android:id="@+id/w_meta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:text="končíš v 13:40" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/w_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:textColor="@color/muted"
+        android:textSize="13.5sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/w_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/r1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r1_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_blue" />
+
+            <TextView
+                android:id="@+id/r1_left"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="8:00" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r1_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Matematika" />
+
+                <TextView
+                    android:id="@+id/r1_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="A12 · Novák" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r1_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text=""
+            android:visibility="gone" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:background="@drawable/row_now">
+
+            <TextView
+                android:id="@+id/r2_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_purple" />
+
+            <TextView
+                android:id="@+id/r2_left"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="8:55" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r2_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Fyzika" />
+
+                <TextView
+                    android:id="@+id/r2_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="B3 · Svobodová" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r2_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text=""
+            android:visibility="gone" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r3_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_amber" />
+
+            <TextView
+                android:id="@+id/r3_left"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="9:55" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r3_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Český jazyk" />
+
+                <TextView
+                    android:id="@+id/r3_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="A12 · Dvořák" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r3_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text="Suplování" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r4_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_green" />
+
+            <TextView
+                android:id="@+id/r4_left"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="10:50" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r4_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Dějepis" />
+
+                <TextView
+                    android:id="@+id/r4_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="Samostudium, můžeš být doma" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r4_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text="doma" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

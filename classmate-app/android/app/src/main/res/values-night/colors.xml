@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tmavá varianta tokenů z globals.css -->
+<resources>
+    <color name="bg">#0f1013</color>
+    <color name="surface">#181a1e</color>
+    <color name="surface2">#212429</color>
+    <color name="text">#f1f2f4</color>
+    <color name="muted">#8d939c</color>
+    <color name="accent">#4ae0a0</color>
+    <color name="accent_ink">#04251a</color>
+    <color name="accent_soft">#123b2d</color>
+    <color name="danger">#f27d6b</color>
+    <color name="h_gray">#8a93a1</color>
+    <color name="h_purple">#a266b8</color>
+    <color name="h_green">#56a468</color>
+    <color name="h_amber">#d9a21b</color>
+    <color name="h_blue">#3b8db8</color>
+    <color name="warn">#e8b13c</color>
+</resources>

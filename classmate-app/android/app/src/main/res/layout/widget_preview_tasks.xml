@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Společné rozvržení seznamových widgetů (rozvrh, úkoly, testy a zkoušení, známky, oběd). Řádky se plní z kódu (live/Widgets.kt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
+
+        <TextView
+            android:id="@+id/w_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:text="Úkoly" />
+
+        <TextView
+            android:id="@+id/w_meta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:text="3 otevřené" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/w_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:textColor="@color/muted"
+        android:textSize="13.5sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/w_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/r1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r1_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_blue" />
+
+            <TextView
+                android:id="@+id/r1_left"
+                android:layout_width="58dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="zítra" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r1_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Příklady 4 až 9 ze cvičebnice" />
+
+                <TextView
+                    android:id="@+id/r1_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="Matematika" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r1_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text=""
+            android:visibility="gone" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r2_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_purple" />
+
+            <TextView
+                android:id="@+id/r2_left"
+                android:layout_width="58dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="za 5 dní" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r2_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Referát o Newtonových zákonech" />
+
+                <TextView
+                    android:id="@+id/r2_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="Fyzika" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r2_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text=""
+            android:visibility="gone" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/r3_bar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:background="@color/h_amber" />
+
+            <TextView
+                android:id="@+id/r3_left"
+                android:layout_width="58dp"
+                android:layout_height="wrap_content"
+                
+                android:layout_marginEnd="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="–" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/r3_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/text"
+                    android:textSize="13.5sp"
+                    android:text="Přečíst třetí kapitolu" />
+
+                <TextView
+                    android:id="@+id/r3_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/muted"
+                    android:textSize="11.5sp"
+                    android:text="Český jazyk" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/r3_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:text=""
+            android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

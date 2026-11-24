@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="retry" content="__URL__">
+<title>Classmate · offline</title>
+<style>
+  :root { color-scheme: light dark; --bg: light-dark(#f4f2ee, #0f1013); --surface: light-dark(#ffffff, #181a1e); --raised: light-dark(#ece9e3, #22252a); --text: light-dark(#16181b, #f1f2f4); --muted: light-dark(#6b6f76, #8d939c); --accent: light-dark(#0e7c56, #4ae0a0); --accent-bg: light-dark(#dff5ea, #12392c); --danger: light-dark(#c2410c, #fb923c); --border: light-dark(rgba(0,0,0,.1), rgba(255,255,255,.12)); --btn: light-dark(#15181b, #eeeff1); --btn-ink: light-dark(#ffffff, #14161a); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, sans-serif; padding: env(safe-area-inset-top, 0) 0 calc(76px + env(safe-area-inset-bottom, 0)); }
+  header { padding: 18px 20px 4px; }
+  .logo { font-weight: 800; font-size: 26px; letter-spacing: -0.04em; }
+  .status { display: flex; gap: 10px; align-items: center; margin: 10px 0 0; padding: 10px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; color: var(--muted); }
+  .status b { color: var(--text); font-weight: 600; }
+  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex: none; }
+  .status.old { border-color: var(--danger); }
+  main { padding: 8px 16px 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 6px 8px; font-weight: 600; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; overflow: hidden; }
+  .row { display: flex; gap: 12px; align-items: center; padding: 13px 16px; border-top: 1px solid var(--border); }
+  .row:first-child { border-top: 0; }
+  .row .t { min-width: 0; flex: 1; }
+  .row .t b { display: block; font-weight: 600; overflow-wrap: anywhere; }
+  .row .t small { display: block; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+  .when { width: 54px; flex: none; color: var(--muted); font-size: 13.5px; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .when b { color: var(--text); display: block; font-weight: 600; }
+  .row.live { background: var(--accent-bg); }
+  .row.cancelled .t b { text-decoration: line-through; color: var(--muted); }
+  .row.past { opacity: .55; }
+  .tag { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--raised); color: var(--muted); flex: none; }
+  .tag.warn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .mark { min-width: 44px; height: 44px; border-radius: 14px; background: var(--raised); display: grid; place-items: center; font-weight: 700; font-size: 18px; flex: none; }
+  .now { padding: 22px; }
+  .now .lead { color: var(--muted); font-size: 14px; }
+  .now .big { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 4px 0 2px; }
+  .now .sub { color: var(--muted); }
+  .bar { height: 6px; border-radius: 6px; background: var(--raised); margin-top: 16px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+  .empty { padding: 22px 16px; color: var(--muted); text-align: center; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 4px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0)); background: var(--surface); border-top: 1px solid var(--border); }
+  nav button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; padding: 9px 2px; border-radius: 14px; }
+  nav button[aria-selected="true"] { background: var(--accent-bg); color: var(--accent); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 22px 0 6px; }
+  a.btn { display: inline-block; background: var(--btn); color: var(--btn-ink); text-decoration: none; font-weight: 600; padding: 12px 22px; border-radius: 14px; }
+  a.link { color: var(--muted); text-decoration: underline; padding: 12px 8px; }
+  .nodata { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+  .nodata h1 { font-size: 22px; margin: 0 0 8px; }
+  .nodata p { color: var(--muted); margin: 0 0 24px; max-width: 320px; }
+</style>
+</head>
+<body>
+<script type="application/json" id="data">__DATA__</script>
+<div id="app"></div>
+<script>
+const RETRY = document.querySelector("meta[name=retry]").content;
+const TZ = "Europe/Prague";
+let D = null;
+try { D = JSON.parse(document.getElementById("data").textContent); } catch (e) {}
+const app = document.getElementById("app");
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const plural = (n, a, b, c) => (n === 1 ? a : n >= 2 && n <= 4 ? b : c);
+const ymd = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(ms);
+const dayLabel = (iso) => {
+  const d = new Date(iso + "T12:00:00Z");
+  const name = new Intl.DateTimeFormat("cs-CZ", { timeZone: "UTC", weekday: "long" }).format(d);
+  return name.charAt(0).toUpperCase() + name.slice(1) + " " + d.getUTCDate() + ". " + (d.getUTCMonth() + 1) + ".";
+};
+const rel = (iso, today) => {
+  const n = Math.round((Date.parse(iso + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 86400000);
+  if (n === 0) return "dnes";
+  if (n === 1) return "zítra";
+  if (n === -1) return "včera";
+  if (n < 0) return "před " + -n + " dny";
+  return "za " + n + " " + (n < 5 ? "dny" : "dní");
+};
+const clock = (ms) => new Intl.DateTimeFormat("cs-CZ", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(ms);
+const ago = (ms) => {
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if (m < 1) return "právě teď";
+  if (m < 60) return "před " + m + " " + plural(m, "minutou", "minutami", "minutami");
+  const h = Math.floor(m / 60);
+  if (h < 24) return "před " + h + " " + plural(h, "hodinou", "hodinami", "hodinami");
+  const d = Math.floor(h / 24);
+  return "před " + d + " " + plural(d, "dnem", "dny", "dny");
+};
+
+// Nadpis s časem do konce, stejné skládání jako ve snapshotu aplikace (Snapshot.titleAt)
+function title(seg, now) {
+  if (!seg.lead || seg.countdownTo == null) return seg.title;
+  const secs = Math.max(1, Math.ceil((seg.countdownTo - now) / 1000));
+  const za = seg.join === "za";
+  if (secs < 60) return seg.lead + (za ? " za " : " · ") + secs + " " + (za ? plural(secs, "vteřinu", "vteřiny", "vteřin") : plural(secs, "vteřina", "vteřiny", "vteřin"));
+  const n = Math.ceil(secs / 60);
+  return seg.lead + (za ? " za " : " · ") + n + " " + (za ? plural(n, "minutu", "minuty", "minut") : plural(n, "minuta", "minuty", "minut"));
+}
+
+const tabs = [["dnes", "Dnes"], ["rozvrh", "Rozvrh"], ["ukoly", "Úkoly"], ["testy", "Testy"], ["znamky", "Známky"]];
+if (D && Array.isArray(D.lunch) && D.lunch.length) tabs.push(["obed", "Oběd"]);
+let tab = (D && sessionStorage.getItem("tab")) || "dnes";
+if (!tabs.some((t) => t[0] === tab)) tab = "dnes";
+
+function lessonRow(l, now) {
+  const live = !l.cancelled && now >= l.begin && now < l.end;
+  const past = now >= l.end;
+  const room = l.room && !l.selfStudy ? " · " + l.room : "";
+  return '<div class="row' + (live ? " live" : "") + (l.cancelled ? " cancelled" : "") + (past && !live ? " past" : "") + '">' +
+    '<div class="when"><b>' + esc(l.beginText) + "</b>" + esc(l.endText) + "</div>" +
+    '<div class="t"><b>' + esc(l.subject) + "</b><small>" + esc((l.hour ? l.hour + ". hodina" : "") + room + (l.teacher && !l.selfStudy ? " · " + l.teacher : "")) + "</small></div>" +
+    (l.cancelled ? '<span class="tag warn">odpadá</span>' : l.selfStudy ? '<span class="tag">doma</span>' : l.change ? '<span class="tag warn">' + esc(l.change) + "</span>" : "") + "</div>";
+}
+
+function view(now) {
+  const today = ymd(now);
+  if (tab === "dnes") {
+    const seg = D.segments.find((s) => now >= s.from && now < s.to);
+    const todayLessons = D.lessons.filter((l) => ymd(l.begin) === today);
+    let html = "";
+    if (seg) {
+      const active = todayLessons.find((l) => !l.cancelled && now >= l.begin && now < l.end);
+      const progress = seg.kind === "in" && active ? Math.min(100, Math.max(0, ((now - active.begin) / (active.end - active.begin)) * 100)) : null;
+      html += '<h2>Právě teď</h2><div class="card now"><div class="big">' + esc(title(seg, now)) + '</div><div class="sub">' + esc(seg.subtitle) + "</div>" + (progress != null ? '<div class="bar"><i style="width:' + progress.toFixed(1) + '%"></i></div>' : "") + "</div>";
+    }
+    html += "<h2>Dnešní rozvrh</h2>";
+    html += todayLessons.length ? '<div class="card">' + todayLessons.map((l) => lessonRow(l, now)).join("") + "</div>" : '<div class="card"><div class="empty">Dnes bez hodin.</div></div>';
+    if (!todayLessons.length || now >= Math.max(...todayLessons.map((l) => l.end))) {
+      // po škole nebo bez výuky: nejbližší další den s hodinami
+      const nextDay = [...new Set(D.lessons.filter((l) => ymd(l.begin) > today).map((l) => ymd(l.begin)))].sort()[0];
+      if (nextDay) html += "<h2>Příští výuka: " + esc(dayLabel(nextDay)) + '</h2><div class="card">' + D.lessons.filter((l) => ymd(l.begin) === nextDay).map((l) => lessonRow(l, now)).join("") + "</div>";
+    }
+    const up = D.tasks.slice(0, 3);
+    if (up.length) html += "<h2>Nejbližší úkoly</h2>" + taskCard(up, today);
+    return html;
+  }
+  if (tab === "rozvrh") {
+    const days = {};
+    for (const l of D.lessons) (days[ymd(l.begin)] = days[ymd(l.begin)] || []).push(l);
+    const keys = Object.keys(days).sort();
+    if (!keys.length) return '<h2>Rozvrh</h2><div class="card"><div class="empty">V uložených datech není žádný rozvrh.</div></div>';
+    return keys.map((k) => "<h2>" + esc(dayLabel(k)) + (k === today ? " · dnes" : "") + '</h2><div class="card">' + days[k].map((l) => lessonRow(l, now)).join("") + "</div>").join("");
+  }
+  if (tab === "ukoly") return "<h2>Otevřené úkoly" + (D.tasksOpen ? " (" + D.tasksOpen + ")" : "") + "</h2>" + (D.tasks.length ? taskCard(D.tasks, today) : '<div class="card"><div class="empty">Žádné otevřené úkoly.</div></div>');
+  if (tab === "testy") {
+    if (!D.tests.length) return '<h2>Testy a zkoušení</h2><div class="card"><div class="empty">V nejbližších dnech nic není.</div></div>';
+    return '<h2>Testy a zkoušení</h2><div class="card">' + D.tests.map((t) => '<div class="row"><div class="when"><b>' + esc(rel(t.date, today)) + "</b>" + esc(dayLabel(t.date).split(" ").slice(1).join(" ")) + '</div><div class="t"><b>' + esc(t.subject) + "</b><small>" + esc(t.topic || "") + "</small></div>" + (t.makeup ? '<span class="tag">náhradní</span>' : "") + (t.oral ? '<span class="tag">zkoušení</span>' : "") + "</div>").join("") + "</div>";
+  }
+  if (tab === "znamky") {
+    if (!D.marks.length) return '<h2>Známky</h2><div class="card"><div class="empty">Žádné známky k zobrazení.</div></div>';
+    return '<h2>Poslední známky</h2><div class="card">' + D.marks.map((m) => '<div class="row"><div class="mark">' + esc(m.value) + '</div><div class="t"><b>' + esc(m.subject) + "</b><small>" + esc((m.caption ? m.caption + " · " : "") + (m.weight && m.weight !== 1 ? "váha " + m.weight : "") ) + "</small></div>" + (m.isNew ? '<span class="tag">nová</span>' : "") + "</div>").join("") + "</div>";
+  }
+  if (tab === "obed") return D.lunch.map((d) => "<h2>" + esc(dayLabel(d.date)) + '</h2><div class="card">' + d.meals.map((m) => '<div class="row"><div class="t"><b>' + esc(m.name) + "</b><small>" + esc(m.kind) + (m.price ? " · " + Math.round(m.price) + " Kč" : "") + "</small></div>" + (m.ordered ? '<span class="tag">objednáno</span>' : "") + "</div>").join("") + "</div>").join("");
+  return "";
+}
+
+function taskCard(list, today) {
+  return '<div class="card">' + list.map((t) => '<div class="row"><div class="t"><b>' + esc(t.title) + "</b><small>" + esc(t.subject || "bez předmětu") + '</small></div><span class="tag' + (t.due && t.due < today ? " warn" : "") + '">' + esc(t.due ? rel(t.due, today) : "bez termínu") + "</span></div>").join("") + "</div>";
+}
+
+let last = "";
+function render() {
+  const now = Date.now();
+  if (!D || !D.segments) {
+    app.innerHTML = '<div class="nodata"><h1>Classmate se nenačetl</h1><p>Zkontroluj připojení k internetu a zkus to znovu.</p><div class="actions"><a class="btn" href="' + esc(RETRY) + '">Zkusit znovu</a></div><a class="link" href="classmate-app://server">Změnit server</a></div>';
+    return;
+  }
+  const old = now - D.generatedAt > 24 * 3600 * 1000;
+  const html =
+    '<header><div class="logo">Classmate</div><div class="status' + (old ? " old" : "") + '"><span class="dot"></span><span><b>Jsi offline.</b> Data z ' + esc(clock(D.generatedAt)) + " (" + esc(ago(D.generatedAt)) + ")." + (old ? " Mohou být neaktuální." : "") + "</span></div></header>" +
+    "<main>" + view(now) + '<div class="actions"><a class="btn" href="' + esc(RETRY) + '">Zkusit znovu</a><a class="link" href="classmate-app://server">Změnit server</a></div></main>' +
+    "<nav>" + tabs.map((t) => '<button data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>").join("") + "</nav>";
+  if (html === last) return; // beze změny se nepřekresluje (jinak by se mohlo ztratit klepnutí)
+  last = html;
+  app.innerHTML = html;
+}
+app.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-tab]");
+  if (!b) return;
+  tab = b.dataset.tab;
+  try { sessionStorage.setItem("tab", tab); } catch (x) {}
+  render();
+  scrollTo(0, 0);
+});
+addEventListener("online", () => { location.href = RETRY; });
+render();
+setInterval(() => { const y = scrollY; render(); scrollTo(0, y); }, 1000);
+</script>
+</body>
+</html>

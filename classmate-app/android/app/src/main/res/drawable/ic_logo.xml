@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo Classmate (stejné jako public/icon.svg na serveru) pro úvodní obrazovku výběru serveru. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#4ae0a0"
+        android:pathData="M16,0h32a16,16 0 0 1 16,16v32a16,16 0 0 1 -16,16H16A16,16 0 0 1 0,48V16A16,16 0 0 1 16,0z" />
+    <path
+        android:pathData="M43.2,22.4A15.5,15.5 0 1 0 43.2,41.6"
+        android:strokeColor="#04251a"
+        android:strokeWidth="9.5"
+        android:strokeLineCap="butt" />
+</vector>

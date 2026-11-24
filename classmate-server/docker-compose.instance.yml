@@ -1,0 +1,35 @@
+# Jedna samostatná instance Classmate: vlastní kontejner, databáze (volume), .env, adresa i port. Nic nesdílí s jinými instancemi.
+# Používá se z vlastní složky instance (vytvoří ji scripts/new-instance.sh): složka = název projektu, takže se volume a kontejnery různých instancí nepletou.
+# Ruční spuštění: cp .env.instance.example .env && docker compose up -d
+services:
+  app:
+    image: ${CLASSMATE_IMAGE:-ghcr.io/classmatecz/classmate}:${CLASSMATE_TAG:-latest}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # všechno z .env jde do aplikace (APP_SECRET, PUBLIC_URL, SMTP_*, MS_*, TODOIST_*, FCM_*, OPERATOR_NAME, …)
+    env_file: .env
+    environment:
+      NODE_OPTIONS: --max-old-space-size=${NODE_HEAP_MB:-1024}
+      DATA_DIR: /data
+      COOKIE_SECURE: "true"
+      TRUST_CLOUDFLARE: ${TRUST_CLOUDFLARE:-true}
+    volumes:
+      - data:/data
+    ports:
+      - "${BIND:-0.0.0.0}:${HOST_PORT:?Nastav HOST_PORT v .env}:3000"
+    init: true # správný PID 1: zombie procesy (ffmpeg) se uklidí a SIGTERM dojde do aplikace
+    # strop paměti kontejneru: při úniku paměti se restartuje jen aplikace, ne celý stroj. Node dostane o něco míň (NODE_HEAP_MB), zbytek je pro ffmpeg a nativní paměť.
+    mem_limit: ${APP_MEMORY:-1536m}
+    pids_limit: 512
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 } # spojení uživatelů, soubory a spolupráce na poznámkách
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  data:

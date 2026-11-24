@@ -1,0 +1,28 @@
+# Kontrola Androidu při každém pushi: sestaví se ladicí i vydané APK a spustí lint.
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # číslo verze = počet commitů
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew assembleDebug assembleRelease lintDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: classmate-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk

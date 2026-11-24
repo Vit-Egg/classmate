@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Classmate</string>
+    <string name="channel_live">Průběh dne</string>
+    <string name="channel_live_desc">Trvalá notifikace s časem do konce hodiny nebo přestávky.</string>
+    <string name="channel_timetable">Změny v rozvrhu</string>
+    <string name="channel_marks">Nové známky</string>
+    <string name="channel_absence">Absence</string>
+    <string name="channel_komens">Komens a nástěnka</string>
+    <string name="channel_cash">Pokladna</string>
+    <string name="channel_duty">Třídní služby</string>
+    <string name="channel_classwork">Úkoly, testy a zkoušení</string>
+    <string name="channel_system">Ostatní oznámení</string>
+    <string name="shortcut_timetable">Rozvrh</string>
+    <string name="shortcut_tasks">Úkoly</string>
+    <string name="shortcut_tests">Testy a zkoušení</string>
+    <string name="shortcut_calendar">Kalendář</string>
+    <string name="widget_now_label">Classmate · Teď</string>
+    <string name="widget_now_desc">Co právě probíhá a odpočet do zvonění nebo do konce přestávky.</string>
+    <string name="widget_timetable_label">Classmate · Rozvrh dnes</string>
+    <string name="widget_timetable_desc">Dnešní hodiny s učebnou, suplováním a zvýrazněnou právě probíhající hodinou.</string>
+    <string name="widget_tasks_label">Classmate · Úkoly</string>
+    <string name="widget_tasks_desc">Nejbližší otevřené úkoly podle termínu, obarvené podle předmětu.</string>
+    <string name="widget_tests_label">Classmate · Testy a zkoušení</string>
+    <string name="widget_tests_desc">Nejbližší testy a zkoušení s odpočtem dnů.</string>
+    <string name="widget_marks_label">Classmate · Známky</string>
+    <string name="widget_marks_desc">Poslední známky z Bakalářů. Ukazuje je každému, kdo se na plochu podívá.</string>
+    <string name="widget_lunch_label">Classmate · Oběd</string>
+    <string name="widget_lunch_desc">Dnešní oběd z jídelníčku Strava.cz (po 14. hodině následující den).</string>
+    <string name="widget_shortcuts_label">Classmate · Zkratky</string>
+    <string name="widget_shortcuts_desc">Rychlé otevření rozvrhu, úkolů, testů a zkoušení, známek a poznámek.</string>
+    <string name="widget_not_linked">Otevři Classmate a přihlas se.</string>
+    <string name="widget_no_data">Data se načítají…</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- malá ikona do stavového řádku (jednobarevná) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M16.98,7.73A6.89,6.89 0 1 0 16.98,16.27"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.22"
+        android:strokeLineCap="butt" />
+</vector>

@@ -1,0 +1,40 @@
+# Sestaví Docker obraz na GitHubu (tam je dost paměti) a nahraje ho do ghcr.io/classmatecz/classmate.
+# Server pak jen stáhne hotový obraz místo vlastního buildu (na malém serveru build padá na „Segmentation fault“).
+name: Obraz aplikace
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: obraz
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # celá historie: číslo verze v aplikaci je počet commitů (u mělkého klonu by vyšlo pořád v1)
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/classmatecz/classmate:latest
+            ghcr.io/classmatecz/classmate:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -439,6 +439,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="section" style={{ marginBottom: 12 }}>O aplikaci</h2>
           <div className="card"><VersionInfo /></div>
           <p className="hint made-by" style={{ margin: "12px 4px 0" }}>made by <s>plojharsim</s> vitegg</p>
+          <p className="hint" style={{ margin: "6px 4px 0" }}>Původní Classmate vytvořil Šimon Plojhar (<a href="https://plojharsim.cz" target="_blank" rel="noopener" className="link-u">plojharsim.cz</a>). Děkujeme mu za poskytnutí kódu.</p>
         </section>
         <section>
           <h2 className="section" style={{ marginBottom: 12 }}>Poděkování</h2>

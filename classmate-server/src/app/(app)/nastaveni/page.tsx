@@ -450,7 +450,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <li><b>Jánu Gornyitzkému</b> za podporu při tvorbě a návrhu hromady nápadů</li>
               <li><b>Vítu Ouhrabkovi</b> (<a href="https://vitegg.com" target="_blank" rel="noopener" className="link-u">vitegg.com</a>) za návrhy nových funkcí a návrh tréninkového deníku</li>
               <li><b>Lukáši Štěrbovi</b> za testování aplikace a doporučení do budoucna</li>
-              <li><b>Anastázii Pokludové</b> za první testování integrace Strava.cz</li>
+              <li><b>Anastázii Pokludové</b> za testování první verze aplikace</li>
             </ul>
           </div>
         </section>

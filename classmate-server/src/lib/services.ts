@@ -565,7 +565,7 @@ function owner(user: User) {
   if (!user.is_owner) fail("Tohle smí jen vlastník serveru.");
 }
 
-/** Adresa Bakalářů u školy se už nepoužívá (třídní aplikace s Bakaláři nekomunikuje). */
+/** Starý sloupec s adresou školního systému se už nepoužívá. */
 function schoolUrl(_raw: unknown): string | null {
   return null;
 }

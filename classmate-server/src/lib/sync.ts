@@ -1,5 +1,5 @@
 /**
- * Rozvrh třídy. Dřív se stahoval z Bakalářů, teď ho ručně zadává správce jako stálý týdenní rozvrh
+ * Rozvrh třídy. Ručně ho zadává správce jako stálý týdenní rozvrh
  * (uložený v app_settings pod klíčem „timetable“). Funkce mají stejná jména a tvar dat jako dřív,
  * takže obrazovky (Dnes, Rozvrh, Kalendář, Předměty…) se nemusely měnit.
  */

@@ -1,5 +1,5 @@
 /**
- * Samostudium: v Bakalářích je u takové hodiny učebna „SamS“. Student je doma, do školy chodit nemusí
+ * Samostudium: hodina s učebnou „SamS“. Student je doma, do školy chodit nemusí
  * a jen když chce, může s učitelem komunikovat libovolným způsobem. Aplikace s tím počítá při odhadu začátku
  * a konce školního dne a hodinu ukazuje jinak než běžnou.
  */

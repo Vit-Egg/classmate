@@ -1,9 +1,9 @@
 /**
- * Osobní kalendář (ICS). Každý si v Nastavení může vložit tajnou adresu svého kalendáře, například z neoficiálního doplňku pro Bakaláře,
- * který si provozuje sám, nebo z Google kalendáře plněného přes BakaGooCal. Server ho pravidelně stahuje a změny proti stálému rozvrhu
+ * Osobní kalendář (ICS). Každý si v Nastavení může vložit tajnou adresu svého kalendáře, třeba z nástroje, který si provozuje sám,
+ * nebo z Google kalendáře. Server ho pravidelně stahuje a změny proti stálému rozvrhu
  * (odpadlá hodina, suplování, jiná učebna, hodina navíc) ukazuje JEN majiteli kalendáře: v Rozvrhu, na Dnes, ve widgetech a ve zprávách.
  *
- * Kód je čistě obecný (formát iCalendar, RFC 5545): o Bakalářích ani o žádné jiné službě nic neví.
+ * Kód je čistě obecný (formát iCalendar, RFC 5545): o žádné konkrétní službě nic neví.
  * Adresa se ukládá šifrovaně, protože obsahuje tajný klíč ke kalendáři.
  *
  * Jak se událost páruje s hodinou: událost v daný den, která začíná do 10 minut od začátku hodiny podle zvonění.

@@ -1,6 +1,5 @@
 /**
  * Úlohy na pozadí: e-maily, oznámení, push, úklid a Todoist. Běží v jednom procesu serveru.
- * (Synchronizace s Bakaláři byla odstraněna – třídní aplikace s Bakaláři nekomunikuje.)
  */
 import { db } from "./db";
 import { emailTick } from "./email-notify";

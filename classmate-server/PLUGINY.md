@@ -44,7 +44,7 @@ Neznámá pole se ignorují a texty se zobrazují jen jako prostý text.
 - **CORS:** manifest stahuje prohlížeč, takže služba musí u manifestu poslat `Access-Control-Allow-Origin` s adresou Classmate (např. `https://classmate.cz`).
 - **Vložení:** embed stránky musí povolit vložení do Classmate hlavičkou `Content-Security-Policy: frame-ancestors https://classmate.cz`. Bez ní widget ukáže jen odkaz na otevření v nové kartě.
 - **Přístup:** cookies se v cizím iframe často blokují (Safari), proto embed stránky a manifest používají tajný klíč v adrese (`?k=…`). Klíč má dovolit jen čtení embedů a musí jít ve službě kdykoli zneplatnit.
-- Widgety běží v iframe se `sandbox="allow-scripts allow-same-origin allow-forms"`: nemůžou přesměrovat celou aplikaci ani otevírat okna mimo sandbox.
+- Widgety běží v iframe se `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`: smí otevřít vyskakovací okno (třeba přihlášení do služby), ale nemůžou přesměrovat samotný Classmate. Vyskakovací okno zůstává v sandboxu, takže ani ono kartu s Classmate nepřesměruje.
 
 ## Obchod s pluginy
 

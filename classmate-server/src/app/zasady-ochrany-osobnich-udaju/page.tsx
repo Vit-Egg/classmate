@@ -72,7 +72,7 @@ export default function Privacy() {
           </tr>
         </tbody>
       </table>
-      <p>Classmate <b>nemá</b> žádné napojení na Bakaláře, školní jídelnu ani školní Microsoft 365. Známky, absenci ani zprávy ze školy nezpracovává.</p>
+      <p>Classmate se sám nepřipojuje k žádnému školnímu systému ani školní jídelně. Data z jiných služeb se k tobě dostanou jen přes widgety, pluginy a kalendář, které si sám přidáš (viz bod 3).</p>
 
       <h2 id="prijemci">3. Komu se údaje předávají</h2>
       <p>Mimo server se údaje dostanou jen tam, kde to provoz nebo funkce, kterou sám použiješ, nutně vyžaduje:</p>

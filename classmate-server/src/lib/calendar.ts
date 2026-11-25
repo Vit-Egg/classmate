@@ -21,7 +21,7 @@ export const KINDS: { id: CalKind; label: string }[] = [
 export const ALL_KINDS = KINDS.map((k) => k.id);
 const ORDER: Record<CalKind, number> = { event: 0, test: 1, change: 2, other: 3, task: 4 };
 
-/** Z Bakalářů se stahují jen týdny v rozumném okolí dneška (každý týden je jeden dotaz, výsledky se cachují). */
+/** Rozvrh se do kalendáře skládá jen pro týdny v rozumném okolí dneška. */
 const PAST_DAYS = 70;
 const FUTURE_DAYS = 150;
 

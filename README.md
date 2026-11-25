@@ -4,7 +4,7 @@ Soukromá webová aplikace pro jednu školní třídu: společné úkoly, testy 
 
 Každá třída si Classmate provozuje sama na vlastním serveru, třeba na domácím serveru s Dockerem. Aplikace nemá veřejnou část: hlavní stránka je přihlášení a noví členové se registrují jen na pozvánku od správce třídy.
 
-> Classmate **není** napojený na Bakaláře, Strava.cz ani na školní Microsoft 365 a není oficiální aplikací žádné školy ani firmy.
+> Classmate se sám nepřipojuje k žádnému školnímu systému ani jídelně a není oficiální aplikací žádné školy ani firmy. Data z jiných služeb si každý může připojit sám přes vlastní widgety, pluginy a kalendář.
 
 ## Co je v repozitáři
 

@@ -20,7 +20,7 @@ export default function Terms() {
       <h2 id="o-aplikaci">1. Co je Classmate a kdo ho provozuje</h2>
       <p>
         Classmate je soukromá aplikace jedné školní třídy pro společné úkoly, testy, poznámky, rozvrh, pokladnu a další třídní věci. Provozuje ji
-        {" "}{who}{mail && <> ({mail})</>} zdarma, bez reklam a bez výdělku. Není to oficiální aplikace školy, Bakalářů ani žádné jiné firmy.
+        {" "}{who}{mail && <> ({mail})</>} zdarma, bez reklam a bez výdělku. Není to oficiální aplikace školy ani žádné firmy.
       </p>
       <p>Účet dostane jen člen třídy na pozvánku od správce třídy. Založením účtu souhlasíš s těmito pravidly.</p>
 
@@ -66,7 +66,7 @@ export default function Terms() {
       <h2 id="rozvrh">7. Rozvrh a osobní kalendář</h2>
       <p>
         Stálý rozvrh zadává správce ručně a může obsahovat chyby. Změny rozvrhu se ti ukážou jen tehdy, když si propojíš vlastní kalendář (například
-        z neoficiálního doplňku pro Bakaláře, který si provozuješ sám, nebo z Google kalendáře). Za obsah a dostupnost takového kalendáře odpovídáš ty
+        z vlastního nástroje, který si provozuješ sám, nebo z Google kalendáře). Za obsah a dostupnost takového kalendáře odpovídáš ty
         a jeho zdroj; závazné jsou vždy informace od školy.
       </p>
 

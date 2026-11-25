@@ -32,7 +32,7 @@ export type LessonDetail = {
  * Nad rozvrhem:
  *  – právě probíhající hodina má pulzující tečku,
  *  – najetí zvýrazní konkrétní hodinu, ostatní hodiny stejného předmětu jen jemně a zbytek ztlumí,
- *  – kliknutí otevře podrobnosti hodiny (včetně tématu z Bakalářů).
+ *  – kliknutí otevře podrobnosti hodiny (včetně tématu, pokud ho hodina má).
  */
 export function TimetableFx({ hours, live, details, openKey, children }: { hours: H[]; live: boolean; details: Record<string, LessonDetail>; openKey?: string; children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);

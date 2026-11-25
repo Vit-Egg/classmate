@@ -11,7 +11,7 @@ export type { LessonItem, LessonItems };
 
 /**
  * Ve stálém rozvrhu: hodina, která je v obou týdnech (sudém i lichém), platí vždy – bez štítku týdne.
- * Bakaláři ji vrací buď jako jednu hodinu s oběma cykly, nebo jako dvě shodné hodiny po jednom cyklu.
+ * Rozvrh ji může obsahovat buď jako jednu hodinu s oběma cykly, nebo jako dvě shodné hodiny po jednom cyklu.
  */
 export function mergeCycles(lessons: Lesson[]): Lesson[] {
   const all = new Set(lessons.flatMap((l) => l.cycles));

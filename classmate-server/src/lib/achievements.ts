@@ -43,12 +43,12 @@ const nextSchoolDay = (d: string) => {
   return n;
 };
 
-/** Známky už aplikace nemá (byly z Bakalářů); trofeje za známky se nenabízejí. */
+/** Známky aplikace nemá; trofeje za známky se nenabízejí. */
 function markStats(_user: User) {
   return { marks: 0, ones: 0, fives: 0, avg: null as number | null, run1: 0, run5: 0, perfectSubjects: 0, goodSubjects: 0, comebacks: 0, onesInDay: 0, percent100: 0 };
 }
 
-/** Absenci už aplikace nemá (byla z Bakalářů); trofeje za docházku se nenabízejí. */
+/** Absenci aplikace nemá; trofeje za docházku se nenabízejí. */
 function absenceStats(_user: User, _today: string) {
   return { absLoaded: false, absPct: 0, absMaxSubjectPct: 0, absRun: 0, unexcused: 0, late: 0, soon: 0, absHours: 0, cleanDays: 0 };
 }

@@ -216,14 +216,8 @@ const _ACH: Achievement[] = [
   A("contacts10", "class", "Celebrita třídy", "Přidej si do profilu 10 kontaktů.", 3, (s) => num(s.contacts, 10)),
   A("event1", "class", "Vlastní termín", "Přidej do kalendáře vlastní událost.", 1, (s) => num(s.events, 1)),
   A("event10", "class", "Pán diáře", "Přidej do kalendáře 10 vlastních událostí.", 2, (s) => num(s.events, 10)),
-  A("train1", "class", "Zahřívací kolo", "Zapiš první trénink do Tréninkového deníku.", 1, (s) => num(s.trainings, 1)),
-  A("train25", "class", "Sportovec třídy", "Zapiš 25 tréninků.", 2, (s) => num(s.trainings, 25)),
-  A("train100", "class", "Železný sportovec", "Zapiš 100 tréninků.", 4, (s) => num(s.trainings, 100)),
-  A("train_min1000", "class", "Tisíc minut v pohybu", "Nasbírej 1 000 minut tréninku.", 3, (s) => num(s.trainMinutes, 1_000)),
-  A("train_min10000", "class", "Olympionik", "Nasbírej 10 000 minut tréninku.", 5, (s) => num(s.trainMinutes, 10_000)),
   A("calfeed", "class", "Rozvrh v kapse", "Připoj si kalendář Classmate k telefonu nebo počítači.", 2, (s) => flag(s.calFeed)),
   A("todoist", "class", "Úkoly všude", "Propoj Classmate s Todoistem.", 2, (s) => flag(s.todoist)),
-  A("strava", "class", "Sportovní propojení", "Propoj Classmate se Stravou.", 2, (s) => flag(s.strava)),
 
   // ───────────────────────── Školní řád
   ...ladder("age", "app", [
@@ -247,12 +241,10 @@ const _ACH: Achievement[] = [
     { goal: 30, name: "Zvyk je železná košile", desc: "Otevři Classmate 30 dní po sobě.", tier: 4 },
     { goal: 60, name: "Perpetuum mobile", desc: "Otevři Classmate 60 dní po sobě.", tier: 5 },
   ], (s) => s.activeStreak),
-  A("bakalari", "app", "Propojeno s Bakaláři", "Propoj Classmate se svým účtem v Bakalářích.", 1, (s) => flag(s.bakalari)),
   A("totp", "app", "Dvojitý zámek", "Zapni dvoufázové ověření.", 2, (s) => flag(s.totp)),
   A("mail", "app", "Pošťák", "Zapni e-mailová upozornění.", 1, (s) => flag(s.mailOn)),
   A("push", "app", "Upozornění na dosah", "Zapni upozornění v prohlížeči nebo v mobilní aplikaci.", 1, (s) => flag(s.push)),
   A("app", "app", "Classmate v kapse", "Přihlas se v mobilní aplikaci.", 2, (s) => flag(s.appDevice)),
-  A("stats", "app", "Přispěvatel statistik", "Povol anonymní sdílení známek do průměrů třídy.", 2, (s) => flag(s.shareStats)),
   A("read25", "app", "Pozorný čtenář", "Přečti 25 zpráv ve zvonečku.", 1, (s) => num(s.msgRead, 25)),
 
   // ───────────────────────── Tajné
@@ -325,8 +317,8 @@ const FLAVOR: Record<string, string> = {
   clean100: "Sto dní na stráži. Pevné nervy.",
   meta50: "Padesát trofejí. To chce vitrínu.",
 };
-/** Trofeje, které stály na Bakalářích (známky, absence, propojení) nebo na Strava.cz, se po přestavbě nenabízejí. */
-const REMOVED = new Set(["strava", "bakalari", "stats", "train1", "train25", "train100", "train_min1000", "train_min10000"]);
+/** Kategorie trofejí, které aplikace pro jednu třídu nenabízí (známky a docházka). */
+const REMOVED = new Set<string>();
 export const ACHIEVEMENTS: Achievement[] = _ACH.filter((a) => a.cat !== "marks" && a.cat !== "attendance" && !REMOVED.has(a.id)).map((a) => (FLAVOR[a.id] ? { ...a, flavor: FLAVOR[a.id] } : a));
 
 export const byId = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -343,7 +335,6 @@ export function iconOf(a: Achievement): string {
   if (a.cat === "notes") return id.startsWith("shared") ? "users" : id.startsWith("file") || id.startsWith("image") ? "file" : "pen";
   if (a.cat === "class") return id.startsWith("cash") ? "coin" : id.startsWith("duty") ? "broom" : id.startsWith("train") ? "pulse" : /^(event|calfeed)/.test(id) ? "caldays" : /^(todoist|strava)/.test(id) ? "link" : "users";
   if (id.startsWith("streak")) return "pulse";
-  if (id.startsWith("bakalari")) return "link";
   if (id === "totp") return "shield";
   if (id === "mail" || id === "read25") return "mail";
   if (id === "push" || id === "app") return "bell";

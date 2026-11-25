@@ -128,3 +128,16 @@ Kontrola manifestu: `curl -i https://muj-web.cz/.well-known/classmate.json` mus�
 ## Starší formát `classmate-plugin/1`
 
 Manifest na libovolné adrese s absolutními adresami (často s tajným klíčem `?k=`). Classmate ho pořád umí (přidání přes obchod s pluginy, nebo zadáním přímé adresy `.json`), ale pro nové pluginy použij verzi 2.
+
+
+## Výška rámu (bez posuvníků)
+
+Classmate přidá k adrese stránky i widgetu pluginu `cm_autoh=1`. Plugin pak může posílat výšku svého obsahu:
+
+```js
+parent.postMessage({ type: "classmate-frame-height", height: document.body.getBoundingClientRect().height }, "*");
+```
+
+Posílej ji při načtení a při každé změně velikosti (třeba přes `ResizeObserver` na `document.body`). Classmate rám zvětší přesně na tuhle výšku
+a stránka v rámu nemá vlastní posuvníky, posouvá se celý Classmate. Ve stránce v rámu nastav `overflow: hidden` a nic nepřesahuj do stran.
+Lite i plná verze to dělají ve skriptu `CM_FRAME_SCRIPT` (src/lib/embed/core.ts).

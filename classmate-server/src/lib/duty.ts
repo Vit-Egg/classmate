@@ -223,17 +223,31 @@ export function adminSetExempt(admin: User, classId: number, userId: number, exe
   adminOnly(admin);
   const r = run("UPDATE users SET duty_skip = ? WHERE id = ? AND class_id = ?", exempt ? 1 : 0, userId, classId);
   if (!r.changes) fail("Uživatel není v téhle třídě.");
-  // vynechaný člověk nemá mít službu v týdnech, které ještě nezačaly; budoucí rozpis se přelosuje
+  // vynechaný člověk nemá mít službu v týdnech, které ještě nezačaly; budoucí rozpis se přelosuje.
+  // Z ručně zadaných týdnů se odebere jen on a jeho týden se doplní losem (ostatní ruční týdny zůstanou).
+  if (exempt) {
+    tx(() => {
+      const from = addDays(baseWeek(), 7);
+      for (const w of all<{ week_start: string }>("SELECT week_start FROM duty_weeks WHERE class_id = ? AND user_id = ? AND manual = 1 AND week_start >= ?", classId, userId, from)) {
+        run("DELETE FROM duty_weeks WHERE class_id = ? AND week_start = ? AND user_id = ?", classId, w.week_start, userId);
+        run("UPDATE duty_weeks SET manual = 0 WHERE class_id = ? AND week_start = ?", classId, w.week_start);
+      }
+    });
+  }
   regenerateFrom(classId, addDays(baseWeek(), 0), true);
   audit(admin, "duty_change", { targetUser: userId, target: classTarget(classId), detail: exempt ? "vynechán ze služeb" : "zařazen do služeb" });
 }
 
 /** Smaže rozpis od daného týdne dál (jen aktuální a budoucí) a vylosuje znovu. Kola se tím nikdy nepoškodí, protože se maže vždy souvislý konec. */
-function regenerateFrom(classId: number, weekStart: string, keepCurrent = false) {
+/**
+ * Smaže rozpis od daného týdne a znovu ho vylosuje. Ručně zadané týdny (manual = 1: zadal je správce nebo import rozpisu)
+ * zůstávají, pokud se výslovně nepřelosovává (`keepManual = false`, tlačítko Přelosovat).
+ */
+function regenerateFrom(classId: number, weekStart: string, keepCurrent = false, keepManual = true) {
   const base = baseWeek();
   const from = weekStart < base ? base : weekStart;
   const start = keepCurrent && from === base ? addDays(base, 7) : from;
-  tx(() => run("DELETE FROM duty_weeks WHERE class_id = ? AND week_start >= ?", classId, start));
+  tx(() => run(`DELETE FROM duty_weeks WHERE class_id = ? AND week_start >= ?${keepManual ? " AND manual = 0" : ""}`, classId, start));
   ensureSchedule(classId);
 }
 
@@ -241,7 +255,7 @@ export function adminReroll(admin: User, classId: number, weekStart: string) {
   adminOnly(admin);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart) || mondayOf(weekStart) !== weekStart) fail("Neplatný týden.");
   if (weekStart < baseWeek()) fail("Minulý týden už změnit nejde.");
-  regenerateFrom(classId, weekStart);
+  regenerateFrom(classId, weekStart, false, false);
   audit(admin, "duty_change", { target: classTarget(classId), detail: `přelosováno od ${weekStart}` });
 }
 
@@ -279,8 +293,10 @@ export function adminSkipWeek(admin: User, classId: number, weekStart: string, s
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart) || mondayOf(weekStart) !== weekStart) fail("Neplatný týden.");
   if (weekStart < baseWeek()) fail("Minulý týden už změnit nejde.");
   tx(() => {
-    if (skip) run("INSERT OR IGNORE INTO duty_skips (class_id, week_start) VALUES (?, ?)", classId, weekStart);
-    else run("DELETE FROM duty_skips WHERE class_id = ? AND week_start = ?", classId, weekStart);
+    if (skip) {
+      run("INSERT OR IGNORE INTO duty_skips (class_id, week_start) VALUES (?, ?)", classId, weekStart);
+      run("DELETE FROM duty_weeks WHERE class_id = ? AND week_start = ?", classId, weekStart);
+    } else run("DELETE FROM duty_skips WHERE class_id = ? AND week_start = ?", classId, weekStart);
   });
   regenerateFrom(classId, weekStart);
   audit(admin, "duty_change", { target: classTarget(classId), detail: `týden ${weekStart} ${skip ? "bez služby" : "se službou"}` });

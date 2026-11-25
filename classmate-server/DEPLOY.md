@@ -76,16 +76,36 @@ Databáze se při startu sama převede na novou verzi (migrace v `src/lib/migrat
 
 ## E-maily (doporučeno)
 
-Bez e-mailu nejde obnovit zapomenuté heslo (musí ho nastavit správce), poslat pozvánku e-mailem ani posílat upozornění. Stačí jakýkoli SMTP server:
+Bez e-mailu nejde obnovit zapomenuté heslo (musí ho nastavit správce), poslat pozvánky e-mailem ani posílat upozornění.
+Pro classmate.cz (DNS v Cloudflare) je doporučené nastavení: **odesílání přes Resend, příjem přes Cloudflare Email Routing**.
 
-| Možnost | Nastavení | Poznámka |
-| --- | --- | --- |
-| Gmail | `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=tvuj@gmail.com`, `SMTP_PASS=<heslo aplikace>`, `SMTP_FROM=Classmate <tvuj@gmail.com>` | Nejrychlejší. Heslo aplikace vytvoříš v účtu Google (nutné dvoufázové ověření). Limit asi 500 e-mailů denně, pro třídu stačí. Odesílatel musí být ten Gmail. |
-| Seznam.cz | `SMTP_HOST=smtp.seznam.cz`, `SMTP_PORT=465`, `SMTP_USER=adresa@seznam.cz`, `SMTP_PASS=<heslo>` | Podobné jako Gmail, české servery. |
-| Vlastní doména (např. Brevo, Resend, Forward Email) | údaje od služby | Hezčí odesílatel (`classmate@tvoje-domena.cz`) a lepší doručitelnost. V DNS (Cloudflare) je potřeba přidat záznamy SPF a DKIM podle návodu služby. |
+### Odesílání: Resend (zdarma 3 000 e-mailů měsíčně, nejvýš 100 denně)
 
-Pak:
+1. Založ účet na resend.com a přidej doménu `classmate.cz`. Resend nabídne automatické přidání DNS záznamů do Cloudflare (DKIM a SPF pro odesílání); jinak je zkopíruj ručně.
+2. Vytvoř API klíč jen s oprávněním „Sending access“.
+3. Do nastavení kontejneru:
+   ```
+   SMTP_HOST=smtp.resend.com
+   SMTP_PORT=465
+   SMTP_USER=resend
+   SMTP_PASS=<API klíč>
+   SMTP_FROM=Classmate <info@classmate.cz>
+   SMTP_PROVIDER_NAME=Resend
+   ```
+4. Restartuj kontejner a ve **Správě → E-maily** pošli zkušební e-mail.
 
-1. Doplň `SMTP_*` do nastavení kontejneru a volitelně `SMTP_PROVIDER_NAME` (název služby, ukáže se v zásadách ochrany osobních údajů).
-2. Restartuj kontejner.
-3. Ve **Správě → E-maily** pošli zkušební e-mail a zkontroluj, že nepřišel do spamu.
+Limit 100 e-mailů denně stačí na pozvánky celé třídy (posílají se najednou) i na běžná upozornění. Kdyby nestačil: SMTP2GO (zdarma 1 000 měsíčně, 200 denně),
+nebo placené Cloudflare Email Service (5 $ měsíčně za Workers Paid, 3 000 e-mailů a pak 0,35 $ za tisíc). Bezplatné tarify Brevo a Mailjet mají vyšší limity, ale podle
+jejich podmínek mohou do e-mailů přidávat své logo.
+
+### Příjem: Cloudflare Email Routing (zdarma)
+
+1. V Cloudflare → classmate.cz → **Email → Email Routing** zapni routing (přidá MX a SPF záznamy).
+2. Přidej pravidlo `info@classmate.cz` → tvůj osobní e-mail (třeba Gmail) a potvrď ho.
+3. Volitelně v Gmailu: **Nastavení → Účty → Odesílat poštu jako** `info@classmate.cz` přes `smtp.resend.com` (port 465, uživatel `resend`, heslo = API klíč), ať jde odpovídat z info@.
+
+### DNS: na co si dát pozor
+
+- **SPF smí být na doméně jen jeden** TXT záznam začínající `v=spf1`. Email Routing ho přidá na `classmate.cz`; Resend používá vlastní SPF na subdoméně `send.classmate.cz`, takže se nepřekrývají.
+- Přidej **DMARC**: TXT záznam `_dmarc.classmate.cz` s hodnotou `v=DMARC1; p=none; rua=mailto:info@classmate.cz`. Až e-maily pár týdnů chodí bez problémů, změň `p=none` na `p=quarantine`.
+- Školní servery (ssps.cz) mohou e-maily z nové domény zpočátku dávat do spamu. Před rozesláním pozvánek si pošli jednu zkušebně na svůj školní e-mail.

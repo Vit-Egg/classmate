@@ -88,7 +88,7 @@ const registerSchema = z.object({
   code: z.string().trim().min(10, "Pozvánka je neplatná.").max(200),
   email: z.string().trim().toLowerCase().pipe(z.email("Zadej platný e-mail.")),
   password: z.string().max(200, "Heslo je moc dlouhé."),
-  accept: z.literal("1", { error: "Potvrď, že souhlasíš s pravidly používání, četl(a) jsi zásady ochrany osobních údajů a je ti aspoň 15 let (nebo máš souhlas zákonného zástupce)." }),
+  accept: z.literal("1", { error: "Potvrď, že souhlasíš s pravidly používání, četl(a) jsi zásady ochrany osobních údajů a je ti aspoň 15 let." }),
 });
 
 /** Registrace z pozvánky: člověk ze seznamu třídy si zvolí e-mail a heslo a převezme svého „neregistrovaného člena“ i s historií. */
@@ -106,7 +106,7 @@ export async function registerAction(_: ActionState, fd: FormData): Promise<Acti
   const passwordHash = await hashPasswordAsync(v.password);
   const ok = tx(() => {
     if (!checkInvite(v.code)) return false; // souběh dvou odeslání téže pozvánky
-    run("UPDATE users SET email = ?, password_hash = ?, placeholder = 0, created_at = ? WHERE id = ? AND placeholder = 1", v.email, passwordHash, Date.now(), invite.userId);
+    run("UPDATE users SET email = ?, password_hash = ?, placeholder = 0, invite_email = NULL, created_at = ? WHERE id = ? AND placeholder = 1", v.email, passwordHash, Date.now(), invite.userId);
     redeemInvite(v.code);
     return true;
   });

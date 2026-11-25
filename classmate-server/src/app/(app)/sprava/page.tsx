@@ -11,7 +11,7 @@ import { removeUserAvatar } from "@/app/actions/avatar";
 import { Avatar } from "@/components/Avatar";
 import { avatarVersion } from "@/lib/avatar";
 import {
-  cancelAnnouncementAction, clearUserSocials, createInviteAction, sendInviteMailAction, sendTestMailAction, renameClassAndSchool, renameUser, resetUserTotp, setPermissionsAction, setRoster,
+  cancelAnnouncementAction, clearUserSocials, createInviteAction, inviteAllByMailAction, inviteByMailAction, sendInviteMailAction, sendTestMailAction, setInviteEmailAction, renameClassAndSchool, renameUser, resetUserTotp, setPermissionsAction, setRoster,
   setUserPassword, signOutUser, toggleAdmin, transferOwnerAction,
 } from "@/app/actions/admin";
 import { LiveSearch } from "@/components/LiveSearch";
@@ -19,7 +19,7 @@ import { PopoverMenu } from "@/components/PopoverMenu";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { all, get } from "@/lib/db";
 import { fmtDate, fmtDateTime, fmtShort, plural } from "@/lib/dates";
-import { parseRoster } from "@/lib/roster";
+import { nameKey, parseRoster } from "@/lib/roster";
 import { instanceStatus, operator } from "@/lib/instance";
 import { requireAdmin } from "@/lib/session";
 import { INVITE_DAYS, pendingInvites } from "@/lib/invites";
@@ -37,13 +37,13 @@ export const dynamic = "force-dynamic";
 type Cls = { id: number; school_id: number; name: string; school: string; cash_enabled: number; duty_enabled: number; board_enabled: number; roster: string; registered: number };
 type UserRow = {
   placeholder: number; id: number; name: string; email: string; role: string; is_owner: number; permissions: string; totp_enabled: number;
-  socials: string | null; last_active_at: number | null; sessions: number; since: number | null; treasurer: number; cash_enabled: number;
+  socials: string | null; last_active_at: number | null; sessions: number; since: number | null; treasurer: number; cash_enabled: number; invite_email: string | null;
 };
 
 const Popover = PopoverMenu;
 
 /** Správa třídy. Na serveru je jedna třída; co kdo ze správců smí, určují jeho oprávnění (src/lib/permissions.ts). */
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string; pozvanka?: string; pro?: string; chyba?: string }> }) {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string; pozvanka?: string; pro?: string; chyba?: string; ok?: string }> }) {
   const me = await requireAdmin();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().toLowerCase();
@@ -59,7 +59,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const invitedName = sp.pro ? get<{ name: string }>("SELECT name FROM users WHERE id = ?", Number(sp.pro))?.name : undefined;
   const inviteLink = sp.pozvanka ? `${siteUrl()}/registrace?kod=${encodeURIComponent(sp.pozvanka)}` : null;
   const users = all<UserRow>(
-    `SELECT u.id, u.name, u.email, u.role, u.is_owner, u.permissions, u.placeholder, u.totp_enabled, u.treasurer, c.cash_enabled, u.socials, u.last_active_at,
+    `SELECT u.id, u.name, u.email, u.invite_email, u.role, u.is_owner, u.permissions, u.placeholder, u.totp_enabled, u.treasurer, c.cash_enabled, u.socials, u.last_active_at,
             (SELECT COUNT(*) FROM sessions WHERE user_id = u.id AND expires_at > :now) sessions, (SELECT MIN(created_at) FROM sessions WHERE user_id = u.id AND expires_at > :now) since
      FROM users u JOIN classes c ON c.id = u.class_id
      WHERE u.demo = 0 AND (:q = '' OR lower(u.name || ' ' || u.email) LIKE '%' || :q || '%')
@@ -172,7 +172,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <Popover label="Seznam studentů">
                 <ActionForm action={setRoster} resetOnSuccess={false}>
                   <input type="hidden" name="class" value={cls.id} />
-                  <label className="field"><span>Studenti třídy {cls.name} (jedno jméno na řádek)</span><textarea className="textarea roster-area" name="roster" rows={14} defaultValue={cls.roster} spellCheck={false} placeholder={"Jan Novák\nEva Svobodová"} /></label>
+                  <label className="field"><span>Studenti třídy {cls.name} (jedno jméno na řádek, za středníkem může být e-mail pro pozvánku)</span><textarea className="textarea roster-area" name="roster" rows={14} defaultValue={parseRoster(cls.roster).map((n) => { const m = users.find((x) => x.placeholder && nameKey(x.name) === nameKey(n)); return m?.invite_email ? `${n}; ${m.invite_email}` : n; }).join("\n")} spellCheck={false} placeholder={"Jan Novák; novak.ja.2026@skola.cz\nEva Svobodová"} /></label>
                   <p className="hint" style={{ margin: 0 }}>
                     Každé jméno se objeví mezi uživateli jako „Bez účtu“ s tlačítkem Pozvat a hned se počítá do plateb a služeb. Smazání jména bez účtu smaže i jeho platby a služby.
                     Když chceš někoho přejmenovat (třeba opravit překlep), napiš řádek <b>Starý název &gt; Nový název</b>. Člověk pak zůstane stejný a nepřijde o platby ani služby.
@@ -200,6 +200,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <section className="hr-section" style={{ marginTop: 32 }}>
         <h2 className="group-title" id="clenove" style={{ marginBottom: 18 }}>Členové</h2>
         {sp.chyba && <p className="msg-error" role="alert">{sp.chyba}</p>}
+        {sp.ok && <p className="msg-ok" role="status">{sp.ok}</p>}
         {inviteLink && (
           <div className="card card-pad" style={{ marginBottom: 16 }}>
             <p style={{ margin: "0 0 10px" }}><b>Pozvánka{invitedName ? ` pro ${invitedName}` : ""}</b> je připravená. Pošli odkaz jen tomu člověku (platí {INVITE_DAYS} dní a jde použít jednou):</p>
@@ -208,7 +209,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <ActionForm action={sendInviteMailAction}>
                 <div className="btn-row" style={{ marginTop: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
                   <input type="hidden" name="code" value={sp.pozvanka} />
-                  <label className="field" style={{ margin: 0, flex: "1 1 220px" }}><span>Nebo pošli e-mailem</span><input className="input" type="email" name="email" placeholder="jmeno@example.cz" autoComplete="off" required /></label>
+                  <label className="field" style={{ margin: 0, flex: "1 1 220px" }}><span>Nebo pošli e-mailem</span><input className="input" type="email" name="email" defaultValue={users.find((x) => x.id === Number(sp.pro))?.invite_email ?? ""} placeholder="jmeno@example.cz" autoComplete="off" required /></label>
                   <Submit>Poslat pozvánku</Submit>
                 </div>
               </ActionForm>
@@ -218,7 +219,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div style={{ marginBottom: 14 }}><LiveSearch initial={q} placeholder="Hledat (jméno, e-mail)…" label="Hledat členy" /></div>
         {[users.filter((u) => !u.placeholder), users.filter((u) => u.placeholder)].map((list, gi) => list.length > 0 && (
           <div key={gi}>
-            {gi === 1 && <h2 className="section" style={{ margin: "30px 4px 12px" }}>Bez účtu ({list.length})</h2>}
+            {gi === 1 && (
+              <div className="section-head" style={{ margin: "30px 4px 12px" }}>
+                <h2 className="section" style={{ margin: 0 }}>Bez účtu ({list.length})</h2>
+                {members && mailConfigured() && list.some((u) => u.invite_email && !invites.has(u.id)) && (
+                  <form action={inviteAllByMailAction}>
+                    <ConfirmButton className="btn small primary" message={`Poslat pozvánku e-mailem všem bez účtu, kteří mají e-mail a zatím nemají platnou pozvánku (${list.filter((u) => u.invite_email && !invites.has(u.id)).length})?`}>Poslat pozvánky všem ({list.filter((u) => u.invite_email && !invites.has(u.id)).length})</ConfirmButton>
+                  </form>
+                )}
+              </div>
+            )}
             <div className="auto-cols" style={{ gap: 16 }}>
               {list.map((u) => {
                 const isAdmin = u.role === "admin" || !!u.is_owner;
@@ -240,8 +250,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     </div>
                     {!!u.placeholder && members && (
                       <div className="user-actions">
-                        <form action={createInviteAction}><input type="hidden" name="user" value={u.id} /><button className="btn small primary">{invites.has(u.id) ? "Nová pozvánka" : "Pozvat"}</button></form>
-                        {invites.has(u.id) && <small className="hint">pozvánka platí do {fmtDate(invites.get(u.id)!)}</small>}
+                        {u.invite_email && mailConfigured() && (
+                          <form action={inviteByMailAction}><input type="hidden" name="user" value={u.id} /><button className="btn small primary">{invites.has(u.id) ? "Poslat znovu" : "Poslat pozvánku"}</button></form>
+                        )}
+                        <form action={createInviteAction}><input type="hidden" name="user" value={u.id} /><button className={`btn small${u.invite_email && mailConfigured() ? "" : " primary"}`}>{invites.has(u.id) ? "Nový odkaz" : "Odkaz na pozvánku"}</button></form>
+                        <Popover label="E-mail">
+                          <ActionForm action={setInviteEmailAction} resetOnSuccess={false}>
+                            <input type="hidden" name="user" value={u.id} />
+                            <label className="field"><span>E-mail pro pozvánku</span><input className="input" type="email" name="email" defaultValue={u.invite_email ?? ""} placeholder="prijmeni.jm.2026@skola.cz" /></label>
+                            <Submit>Uložit</Submit>
+                          </ActionForm>
+                        </Popover>
+                        <small className="hint">{u.invite_email ?? "bez e-mailu"}{invites.has(u.id) ? ` · pozvánka platí do ${fmtDate(invites.get(u.id)!)}` : ""}</small>
                       </div>
                     )}
                     {!u.placeholder && (members || owner || can(me, "pokladna")) && (

@@ -41,7 +41,7 @@ services:
       SMTP_PORT: "587"
       SMTP_USER: ""
       SMTP_PASS: ""
-      SMTP_FROM: "Classmate <classmate@example.cz>"
+      SMTP_FROM: "Classmate <info@classmate.cz>"
       SMTP_PROVIDER_NAME: ""   # název poštovní služby do zásad ochrany údajů, např. Gmail
       # Volitelné: Todoist přes OAuth (jinak jde propojit API tokenem)
       TODOIST_CLIENT_ID: ""

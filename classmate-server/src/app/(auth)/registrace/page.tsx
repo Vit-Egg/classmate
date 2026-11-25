@@ -27,5 +27,5 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       </>
     );
   }
-  return <RegisterForm code={code} name={invite.name} className={invite.className} next={safe} />;
+  return <RegisterForm code={code} name={invite.name} className={invite.className} next={safe} email={invite.email ?? ""} />;
 }

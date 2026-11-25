@@ -8,9 +8,9 @@ import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/action";
 import { redirect } from "next/navigation";
 import { get } from "@/lib/db";
-import { checkInvite, createInvite, INVITE_DAYS, InviteError } from "@/lib/invites";
-
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+import { createInvite, InviteError } from "@/lib/invites";
+import { EMAIL_RE, mailInviteCode, mailInviteTo } from "@/lib/invite-mail";
+import { all, run } from "@/lib/db";
 
 async function guard(fn: (admin: Awaited<ReturnType<typeof requireAdmin>>) => void): Promise<ActionState> {
   const admin = await requireAdmin();
@@ -115,38 +115,75 @@ export const renameClassAndSchool = async (_: ActionState, fd: FormData) =>
     svc.adminUpdateSchool(a, Number(fd.get("school")), fd.get("schoolName"), null);
   });
 
-/** Správa → Členové: odešle připravenou pozvánku e-mailem. Adresa se nikam neukládá, slouží jen k doručení odkazu. */
+/** Správa → Členové: odešle připravenou pozvánku e-mailem na zadanou adresu (a uloží ji k členovi pro příště). */
 export async function sendInviteMailAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const admin = await requirePermission("clenove");
-  const { mailConfigured, sendMail } = await import("@/lib/mail");
-  const { layout } = await import("@/lib/email-notify");
-  const { siteUrl } = await import("@/lib/site");
+  const { mailConfigured } = await import("@/lib/mail");
   if (!mailConfigured()) return { error: "Server zatím neumí posílat e-maily (chybí nastavení SMTP)." };
-  const code = String(fd.get("code") ?? "");
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: "Napiš platný e-mail." };
-  const inv = checkInvite(code);
-  if (!inv) return { error: "Pozvánka už neplatí. Vytvoř novou." };
-  const link = `${siteUrl()}/registrace?kod=${encodeURIComponent(code)}`;
-  const first = inv.name.split(/\s+/)[0];
+  if (!EMAIL_RE.test(email) || email.length > 200) return { error: "Napiš platný e-mail." };
   try {
-    await sendMail({
-      to: email,
-      subject: `Pozvánka do Classmate třídy ${inv.className}`,
-      text: `Ahoj ${first},\n\n${admin.name} tě zve do Classmate, aplikace naší třídy ${inv.className} (úkoly, testy, rozvrh, poznámky).\n\nÚčet si založíš tady (odkaz platí ${INVITE_DAYS} dní a jde použít jen jednou):\n${link}\n\nOdkaz nikomu nepřeposílej, patří jen tobě. Pokud pozvánku nečekáš, e-mail smaž.`,
-      html: layout(
-        `Pozvánka do třídy ${esc(inv.className)}`,
-        `<p style="margin:0 0 12px;line-height:1.55">Ahoj ${esc(first)}, <b>${esc(admin.name)}</b> tě zve do Classmate, aplikace naší třídy: úkoly, testy, rozvrh a poznámky na jednom místě.</p><p style="margin:0;line-height:1.55">Odkaz platí ${INVITE_DAYS} dní a jde použít jen jednou. Nikomu ho nepřeposílej, patří jen tobě.</p>`,
-        "Pokud pozvánku nečekáš, e-mail klidně smaž. Bez kliknutí na odkaz se nic nestane.",
-        { label: "Založit účet", url: link },
-      ),
-    });
+    const inv = await mailInviteCode(String(fd.get("code") ?? ""), email, admin.name);
+    run("UPDATE users SET invite_email = ? WHERE id = ? AND placeholder = 1", email, inv.userId);
+    audit(admin, "invite_mail", { targetUser: { id: inv.userId, name: inv.name } });
   } catch (e) {
     console.error("invite mail", e);
-    return { error: "E-mail se nepodařilo odeslat. Zkontroluj nastavení SMTP, nebo pošli odkaz jinak." };
+    return { error: e instanceof Error && e.message === "Pozvánka už neplatí." ? "Pozvánka už neplatí. Vytvoř novou." : "E-mail se nepodařilo odeslat. Zkontroluj nastavení SMTP, nebo pošli odkaz jinak." };
   }
-  audit(admin, "invite_mail", { targetUser: { id: inv.userId, name: inv.name } });
+  revalidatePath("/sprava");
   return { ok: true, message: `Pozvánka odešla na ${email}.` };
+}
+
+/** Správa → Členové: e-mail člena bez účtu, na který se posílá pozvánka (prázdné = smazat). */
+export async function setInviteEmailAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  await requirePermission("clenove");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (email && (!EMAIL_RE.test(email) || email.length > 200)) return { error: "Napiš platný e-mail." };
+  run("UPDATE users SET invite_email = ? WHERE id = ? AND placeholder = 1", email || null, Number(fd.get("user")));
+  revalidatePath("/sprava");
+  return { ok: true, message: email ? "E-mail uložen." : "E-mail smazán." };
+}
+
+/** Správa → Členové: nová pozvánka a hned e-mailem na uložený e-mail člena. */
+export async function inviteByMailAction(fd: FormData) {
+  const admin = await requirePermission("clenove");
+  const userId = Number(fd.get("user"));
+  let msg: string;
+  try {
+    const r = await mailInviteTo(userId, admin.id, admin.name);
+    audit(admin, "invite_mail", { targetUser: { id: userId, name: r.name } });
+    msg = `Pozvánka pro ${r.name} odešla na ${r.email}.`;
+  } catch (e) {
+    console.error("invite mail", e);
+    msg = e instanceof InviteError || (e instanceof Error && /e-mail|účet/.test(e.message)) ? e.message : "E-mail se nepodařilo odeslat. Zkontroluj nastavení SMTP.";
+    redirect(`/sprava?chyba=${encodeURIComponent(msg)}#clenove`);
+  }
+  redirect(`/sprava?ok=${encodeURIComponent(msg)}#clenove`);
+}
+
+/** Správa → Členové: pošle pozvánku všem bez účtu, kteří mají e-mail a zatím nemají platnou pozvánku. */
+export async function inviteAllByMailAction() {
+  const admin = await requirePermission("clenove");
+  const { mailConfigured } = await import("@/lib/mail");
+  if (!mailConfigured()) redirect(`/sprava?chyba=${encodeURIComponent("Server zatím neumí posílat e-maily.")}#clenove`);
+  const list = all<{ id: number }>(
+    "SELECT id FROM users WHERE class_id = ? AND placeholder = 1 AND invite_email IS NOT NULL AND id NOT IN (SELECT user_id FROM invites WHERE used_at IS NULL AND expires_at > ?) ORDER BY id",
+    admin.class_id, Date.now(),
+  );
+  let sent = 0;
+  const failed: string[] = [];
+  for (const u of list) {
+    try {
+      const r = await mailInviteTo(u.id, admin.id, admin.name);
+      audit(admin, "invite_mail", { targetUser: { id: u.id, name: r.name } });
+      sent++;
+    } catch (e) {
+      console.error("invite mail", e);
+      failed.push(get<{ name: string }>("SELECT name FROM users WHERE id = ?", u.id)?.name ?? String(u.id));
+    }
+  }
+  const msg = `Odesláno ${sent} ${plural(sent, "pozvánka", "pozvánky", "pozvánek")}.${failed.length ? ` Nepovedlo se: ${failed.join(", ")}.` : ""}`;
+  redirect(`/sprava?${failed.length ? "chyba" : "ok"}=${encodeURIComponent(msg)}#clenove`);
 }
 
 /** Správa: zkušební e-mail na adresu správce, aby šlo ověřit nastavení SMTP. */

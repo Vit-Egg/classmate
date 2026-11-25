@@ -53,8 +53,8 @@ export default function Privacy() {
             <td>Plnění smlouvy (čl. 6 odst. 1 písm. b)</td>
           </tr>
           <tr>
-            <td><b>E-mail pro pozvánku</b>: adresa, na kterou správce pošle pozvánku do třídy</td>
-            <td>Doručení pozvánky. V Classmate se adresa neukládá, zůstane jen v poštovním serveru jako odeslaný e-mail.</td>
+            <td><b>E-mail pro pozvánku</b>: adresa (typicky školní), na kterou správce pošle pozvánku do třídy</td>
+            <td>Doručení pozvánky. U člena bez účtu je uložená, dokud se nezaregistruje; registrací se smaže a dál platí jen e-mail, který si zvolíš sám.</td>
             <td>Oprávněný zájem třídy pozvat své členy (čl. 6 odst. 1 písm. f)</td>
           </tr>
           <tr>
@@ -134,7 +134,7 @@ export default function Privacy() {
       <h2 id="uchovani">7. Jak dlouho údaje držíme</h2>
       <ul>
         <li>Účet a tvůj obsah, dokud účet nesmažeš, nejdéle do konce provozu aplikace pro třídu (typicky do konce studia). Před ukončením provozu dostaneš možnost stáhnout si data.</li>
-        <li>Nepoužitá pozvánka 14 dní. E-mail, na který byla pozvánka poslána, Classmate neukládá.</li>
+        <li>Nepoužitá pozvánka 14 dní. E-mail pro pozvánku do registrace (nebo do odebrání ze seznamu třídy).</li>
         <li>Zprávy a upozornění v aplikaci 60 dní.</li>
         <li>Přihlášení 30 dní od posledního použití.</li>
         <li>Smazané poznámky 30 dní v koši, pak se smažou natrvalo.</li>

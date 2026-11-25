@@ -23,7 +23,9 @@ export const nameKey = (name: string) =>
 const RENAME = /\s*(?:->|=>|→|>)\s*/;
 /** Třída připsaná za jménem po čárce („Novák Jan, 1.B“): do jména nepatří. */
 const CLASS_SUFFIX = /\s*,\s*\d{1,2}\s*\.?\s*[A-Za-z]{0,2}\s*$/;
-const clean = (l: string) => l.replace(/^\s*(?:\d+[.)]|[-*•–])\s*/, "").replace(/\s+/g, " ").replace(CLASS_SUFFIX, "").trim();
+/** E-mail za jménem: „Jan Novák; jan@skola.cz“, „Jan Novák <jan@skola.cz>“ nebo oddělený tabulátorem (z tabulky). Do jména nepatří. */
+const EMAIL_TAIL = /\s*(?:[;\t<,]|\s)\s*<?([^\s;<>,]+@[^\s;<>,]+\.[^\s;<>,]+)>?\s*$/;
+const clean = (l: string) => l.replace(EMAIL_TAIL, "").replace(/^\s*(?:\d+[.)]|[-*•–])\s*/, "").replace(/\s+/g, " ").replace(CLASS_SUFFIX, "").trim();
 
 /**
  * Jméno z Bakalářů do podoby, v jaké se ukazuje v aplikaci. Bakaláři někdy vrací „Příjmení Jméno, 1.B“ (se třídou a příjmením napřed):
@@ -43,6 +45,18 @@ export function parseRoster(text: string): string[] {
     .split(/\r?\n/)
     .map((l) => clean(l.split(RENAME).slice(-1)[0] ?? ""))
     .filter(Boolean);
+}
+
+/** E-maily pro pozvánky zadané v seznamu za jménem (klíč = nameKey jména). */
+export function parseRosterEmails(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const line of text.split(/\r?\n/)) {
+    const last = line.split(RENAME).slice(-1)[0] ?? "";
+    const m = last.match(EMAIL_TAIL);
+    const name = clean(last);
+    if (m && name && m[1].length <= 200) out.set(nameKey(name), m[1].toLowerCase());
+  }
+  return out;
 }
 
 /** Přejmenování zadaná v seznamu řádky „Starý > Nový“. */
@@ -94,6 +108,7 @@ export const memberNamed = (classId: number, ...names: string[]) => {
 export function saveRoster(classId: number, text: string): { added: number; removed: number; total: number } {
   if (!get("SELECT 1 FROM classes WHERE id = ?", classId)) throw new RosterError("Třída neexistuje.");
   const names = parseRoster(text);
+  const emails = parseRosterEmails(text);
   if (names.length > 200) throw new RosterError("Seznam má moc jmen (nejvýš 200).");
   for (const n of names) {
     if (n.length < 2 || n.length > 100) throw new RosterError(`Jméno „${n.slice(0, 40)}“ má špatnou délku (2 až 100 znaků).`);
@@ -146,12 +161,14 @@ export function saveRoster(classId: number, text: string): { added: number; remo
         continue;
       }
       have.add(nameKey(m.name));
-      // člen bez účtu se ukazuje tak, jak je napsaný v seznamu
+      // člen bez účtu se ukazuje tak, jak je napsaný v seznamu; e-mail za jménem se uloží pro pozvánku
       if (m.name !== text) run("UPDATE users SET name = ? WHERE id = ?", text, m.id);
+      const mail = emails.get(nameKey(m.name));
+      if (mail) run("UPDATE users SET invite_email = ? WHERE id = ?", mail, m.id);
     }
     for (const [k, n] of seen) {
       if (have.has(k)) continue;
-      const id = Number(run("INSERT INTO users (email, name, password_hash, role, school_id, class_id, created_at, placeholder) VALUES (?, ?, '!', 'user', ?, ?, ?, 1)", `neregistrovany-${randomUUID()}@bez-uctu.invalid`, n, school, classId, Date.now()).lastInsertRowid);
+      const id = Number(run("INSERT INTO users (email, name, password_hash, role, school_id, class_id, created_at, placeholder, invite_email) VALUES (?, ?, '!', 'user', ?, ?, ?, 1, ?)", `neregistrovany-${randomUUID()}@bez-uctu.invalid`, n, school, classId, Date.now(), emails.get(k) ?? null).lastInsertRowid);
       addToOpenRequests(classId, id);
       added++;
     }

@@ -11,7 +11,7 @@ import { todoistOAuthConfigured } from "./todoist";
 
 const env = (k: string) => process.env[k]?.trim() ?? "";
 
-/** Kdo server provozuje (OPERATOR_NAME, OPERATOR_URL) a kam se na něj dá napsat (FEEDBACK_EMAIL, jinak CONTACT_EMAIL, jinak kontakt@classmate.cz). */
+/** Kdo server provozuje (OPERATOR_NAME, OPERATOR_URL) a kam se na něj dá napsat (FEEDBACK_EMAIL, jinak CONTACT_EMAIL, jinak info@classmate.cz). */
 export const operator = () => ({ name: env("OPERATOR_NAME"), url: env("OPERATOR_URL"), email: env("FEEDBACK_EMAIL") || env("CONTACT_EMAIL") || DEFAULT_CONTACT });
 
 export type StatusItem = { label: string; ok: boolean; hint: string };

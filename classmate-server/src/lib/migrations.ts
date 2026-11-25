@@ -1261,4 +1261,13 @@ CREATE TABLE IF NOT EXISTS user_timetables (
 );
 `,
   },
+  {
+    id: 80,
+    sql: `
+-- E-mail, na který se členovi bez účtu posílá pozvánka (třeba školní adresa). Po registraci se smaže.
+ALTER TABLE users ADD COLUMN invite_email TEXT;
+-- Týden služby zadaný ručně (správcem nebo importem rozpisu): automatické losování ho nepřepíše ani nedoplní.
+ALTER TABLE duty_weeks ADD COLUMN manual INTEGER NOT NULL DEFAULT 0;
+`,
+  },
 ];

@@ -2,7 +2,7 @@
 import { mailConfigured, sendMail } from "./mail";
 import { DEFAULT_CONTACT } from "./contact";
 
-/** Kam zprávy chodí: FEEDBACK_EMAIL, jinak CONTACT_EMAIL, jinak kontakt@classmate.cz (adresa zobrazená pod formulářem). */
+/** Kam zprávy chodí: FEEDBACK_EMAIL, jinak CONTACT_EMAIL, jinak info@classmate.cz (adresa zobrazená pod formulářem). */
 export const ownerEmail = () => process.env.FEEDBACK_EMAIL?.trim() || process.env.CONTACT_EMAIL?.trim() || DEFAULT_CONTACT;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

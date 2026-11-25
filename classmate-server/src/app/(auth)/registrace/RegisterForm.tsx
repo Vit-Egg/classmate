@@ -4,7 +4,7 @@ import Link from "next/link";
 import { registerAction } from "@/app/actions/auth";
 import { ActionForm, Submit } from "@/components/forms";
 
-export function RegisterForm({ code, name, className, next }: { code: string; name: string; className: string; next: string }) {
+export function RegisterForm({ code, name, className, next, email = "" }: { code: string; name: string; className: string; next: string; email?: string }) {
   return (
     <>
       <h1 style={{ marginBottom: 6 }}>Ahoj, {name}</h1>
@@ -16,7 +16,7 @@ export function RegisterForm({ code, name, className, next }: { code: string; na
         {next && <input type="hidden" name="next" value={next} />}
         <label className="field">
           <span>E-mail</span>
-          <input className="input" type="email" name="email" autoComplete="email" required />
+          <input className="input" type="email" name="email" autoComplete="email" defaultValue={email} required />
         </label>
         <label className="field">
           <span>Heslo</span>
@@ -33,7 +33,7 @@ export function RegisterForm({ code, name, className, next }: { code: string; na
             <Link href="/zasady-ochrany-osobnich-udaju" className="link-u" target="_blank">
               zásady ochrany osobních údajů
             </Link>
-            . Je mi aspoň 15 let, nebo s tím souhlasí můj zákonný zástupce.
+            . Je mi aspoň 15 let.
           </span>
         </label>
         <div style={{ height: 4 }} />

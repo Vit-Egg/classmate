@@ -98,6 +98,7 @@ export function ensureSchedule(classId: number, now = pragueNow()): void {
     for (const r of all<{ week_start: string; user_id: number }>("SELECT week_start, user_id FROM duty_weeks WHERE class_id = ? AND week_start >= ? ORDER BY week_start", classId, base)) byWeek.set(r.week_start, [...(byWeek.get(r.week_start) ?? []), r.user_id]);
     for (const [week, ids] of byWeek) {
       if (ids.length >= want || get("SELECT 1 FROM duty_skips WHERE class_id = ? AND week_start = ?", classId, week)) continue;
+      if (get("SELECT 1 FROM duty_weeks WHERE class_id = ? AND week_start = ? AND manual = 1", classId, week)) continue; // ručně zadaný týden zůstává, jak je
       if (week > base) {
         run("DELETE FROM duty_weeks WHERE class_id = ? AND week_start = ?", classId, week);
         continue;
@@ -261,7 +262,7 @@ export function adminSetWeek(admin: User, classId: number, weekStart: string, us
   tx(() => {
     run("DELETE FROM duty_skips WHERE class_id = ? AND week_start = ?", classId, weekStart);
     run("DELETE FROM duty_weeks WHERE class_id = ? AND week_start = ?", classId, weekStart);
-    for (const id of ids) run("INSERT INTO duty_weeks (class_id, week_start, user_id, round) VALUES (?, ?, ?, 0)", classId, weekStart, id);
+    for (const id of ids) run("INSERT INTO duty_weeks (class_id, week_start, user_id, round, manual) VALUES (?, ?, ?, 0, 1)", classId, weekStart, id);
     renumberRounds(classId, baseWeek()); // kola se dopočítají podle toho, kdo za kým slouží
   });
   const base = baseWeek();

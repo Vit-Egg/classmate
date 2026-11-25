@@ -8,7 +8,8 @@ export const DEVLOG: DevlogEntry[] = [
     items: [
       "Na stránku Dnes si můžeš připnout vlastní widget: libovolnou stránku z jiné služby, nebo celý plugin s widgety, stránkou do menu a doporučeným rozvržením.",
       "Ověřené pluginy najdeš v Nastavení → Pluginy a widgety → Obchod s pluginy. Plugin jde přidat i z adresy jeho manifestu.",
-      "Widgety a pluginy se ukládají jen ve tvém prohlížeči. Server Classmate jejich adresy nezná a spolužáci je nevidí. Na jiné zařízení je přeneseš exportem do souboru.",
+      "Plugin přidáš i jen z adresy webu: Classmate sám najde, co nabízí (stránky do menu, widgety na Dnes, doporučené rozvržení), a vložené stránky převezmou motiv a barvu Classmate.",
+      "Widgety a pluginy se ukládají u tvého účtu, takže je máš na všech zařízeních. Spolužáci je nevidí.",
       "Widget může otevřít vyskakovací okno, třeba kvůli přihlášení do služby, ale nemůže přesměrovat samotný Classmate.",
     ],
   },

@@ -97,7 +97,7 @@ export default function Privacy() {
         <li><b>Stripe Payments Europe</b>: platba kartou do třídní pokladny, pokud ji třída používá. Stripe je pro platbu samostatným správcem; Classmate číslo karty nikdy nevidí ani neukládá.</li>
         <li><b>Todoist</b>: jen když propojíš svůj účet; posílají se do něj úkoly.</li>
         <li><b>Tvůj osobní kalendář (ICS)</b>: jen když v Nastavení vložíš jeho adresu; server ho pravidelně stahuje, aby ti ukázal změny rozvrhu. Adresa se ukládá šifrovaně a nikdo jiný ji nevidí.</li>
-        <li><b>Služby vlastních widgetů a pluginů</b> (například Tréninkový deník): jen když si je sám přidáš. Jejich stránky načítá přímo tvůj prohlížeč, takže služba vidí běžné údaje o připojení (IP adresa, prohlížeč). Adresy widgetů a pluginů se ukládají jen ve tvém prohlížeči, server Classmate je nezná a data z nich nevidí. Za data v takové službě odpovídá její provozovatel podle svých zásad.</li>
+        <li><b>Služby vlastních widgetů a pluginů</b> (například Tréninkový deník): jen když si je sám přidáš. Jejich stránky načítá přímo tvůj prohlížeč, takže služba vidí běžné údaje o připojení (IP adresa, prohlížeč). Adresy widgetů a pluginů (a jejich rozvržení) se ukládají u tvého účtu, aby je měl(a) na všech zařízeních; vidíš je jen ty. Obsah vložených stránek načítá jen tvůj prohlížeč, server Classmate data z nich nevidí. Za data v takové službě odpovídá její provozovatel podle svých zásad.</li>
         <li><b>nameday.abalin.net</b>: pro zobrazení svátků se posílá jen dnešní datum, žádné osobní údaje.</li>
         <li><b>Spolužáci</b>: viz bod 4.</li>
       </ul>

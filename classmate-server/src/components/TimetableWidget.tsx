@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { EmbedFrame } from "./EmbedFrame";
 import { loadPlugins, onPluginsChange, type PluginState } from "@/lib/plugins-client";
 
-/** Který osobní widget nahrazuje rozvrh. Ukládá se jen v tomhle prohlížeči, stejně jako widgety samotné. */
+/** Který osobní widget nahrazuje rozvrh. Volba se ukládá jen v tomhle prohlížeči (widgety samotné jsou u účtu). */
 const KEY = "classmate.ttwidget.v1";
 
 const readChoice = () => {

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { EmbedFrame } from "./EmbedFrame";
 import { loadPlugins, moveWidget, onPluginsChange, removeWidget, updateWidget, type PluginState } from "@/lib/plugins-client";
 
-/** Osobní widgety na stránce Dnes (vložené stránky a widgety pluginů). Vidí je jen tenhle prohlížeč. */
+/** Widgety přidaných webů a pluginů na stránce Dnes (jen tvoje, na všech tvých zařízeních). Widget pluginu vypadá jako ostatní karty na Dnes. */
 export function PersonalWidgets() {
   const [s, setS] = useState<PluginState | null>(null);
   const [edit, setEdit] = useState(false);
@@ -18,10 +18,11 @@ export function PersonalWidgets() {
   if (!s.widgets.length) {
     return (
       <p className="hint" style={{ margin: "28px 4px 0" }}>
-        Chceš na tuhle stránku vlastní widget, třeba stránku z jiné služby? <Link href="/nastaveni?k=pluginy" className="link-u">Přidat vložené stránky a pluginy</Link>
+        Chceš sem rozvrh z Bakalářů, známky, obědy nebo jiný web? <Link href="/nastaveni?k=pluginy" className="link-u">Přidat web nebo plugin</Link>
       </p>
     );
   }
+  const plugins = new Set(s.plugins.filter((p) => p.kind === "plugin").map((p) => p.id));
   const col = (c: "l" | "r") => s.widgets.filter((w) => w.col === c);
   const card = (w: PluginState["widgets"][number], i: number, n: number) => (
     <section key={w.id}>
@@ -38,7 +39,7 @@ export function PersonalWidgets() {
           </div>
         )}
       </div>
-      <EmbedFrame title={w.title} url={w.url} height={w.height} />
+      <EmbedFrame title={w.title} url={w.url} height={w.height} plugin={!!w.plugin && plugins.has(w.plugin)} />
     </section>
   );
   const l = col("l");
@@ -52,7 +53,6 @@ export function PersonalWidgets() {
           <Link href="/nastaveni?k=pluginy" className="btn small">Přidat</Link>
         </div>
       </div>
-      <p className="hint" style={{ margin: "0 4px 14px" }}>Vidíš je jen ty a jen v tomhle prohlížeči.</p>
       <div className="grid-2" style={l.length && r.length ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}>
         {l.length > 0 && <div className="stack-lg">{l.map((w, i) => card(w, i, l.length))}</div>}
         {r.length > 0 && <div className="stack-lg">{r.map((w, i) => card(w, i, r.length))}</div>}

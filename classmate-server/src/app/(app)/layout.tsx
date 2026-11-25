@@ -14,6 +14,9 @@ import { FullscreenBell } from "@/components/FullscreenBell";
 import { RecorderBar } from "@/components/RecorderBar";
 import { RecordPrompt } from "@/components/RecordPrompt";
 import { Sidebar } from "@/components/Sidebar";
+import { PluginsBoot } from "@/components/PluginsBoot";
+import { getPluginState } from "@/lib/plugins-store";
+import { pluginPages } from "@/lib/plugins-core";
 import { subjectHues } from "@/lib/content";
 import { pragueNow } from "@/lib/dates";
 import { buildSlots } from "@/lib/schedule";
@@ -37,9 +40,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user.email_gate && user.email_confirmed_for !== user.email && mailConfigured()) redirect("/overit-email");
   const slots = buildSlots(peekTimetable(user, "this"), pragueNow().dow, subjectHues(user.class_id));
   const keys = resolveKeys(user.shortcuts);
+  const plugins = getPluginState(user.id);
   return (
     <div className="shell">
-      <Sidebar me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={isManager(user)} slots={slots} unread={unreadCount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (isManager(user) && anyCash())} />
+      <PluginsBoot state={plugins} userId={user.id} />
+      <Sidebar plugins={pluginPages(plugins)} me={{ name: user.name, src: (() => { const v = avatarVersion(user.id); return v ? avatarUrl(user.id, v) : null; })() }} school={user.school_name} className={user.class_name} isAdmin={isManager(user)} slots={slots} unread={unreadCount(user.id)} study={aiEnabled() && !user.demo} duty={!!user.duty_enabled} board={!!user.board_enabled} boardNew={newPosts(user)} cash={!!user.cash_enabled || (isManager(user) && anyCash())} />
       <main className="main">{children}</main>
       <AppBridge signedIn />
       <NavProgress />

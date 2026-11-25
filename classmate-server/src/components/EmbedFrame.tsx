@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { themed } from "@/lib/plugins-client";
+
 /**
- * Vložená cizí stránka (osobní widget nebo stránka pluginu). Prohlížeč ji načítá přímo ze služby, server Classmate ji nevidí.
+ * Vložená stránka (widget nebo stránka v menu). Prohlížeč ji načítá přímo z webu, server Classmate ji nevidí.
+ * U pluginů (`plugin`) se přidá motiv a barva Classmate a rám je bez okraje, ať vypadá jako součást Classmate.
  *
  * Sandbox:
  * - skripty, formuláře a vlastní úložiště služby ano (allow-scripts, allow-same-origin, allow-forms),
@@ -12,20 +16,34 @@
  */
 export const EMBED_SANDBOX = "allow-scripts allow-same-origin allow-forms allow-popups";
 
-export function EmbedFrame({ title, url, height, fill = false }: { title: string; url: string; height?: number; fill?: boolean }) {
+export function EmbedFrame({ title, url, height, fill = false, plugin = false }: { title: string; url: string; height?: number; fill?: boolean; plugin?: boolean }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    const update = () => setSrc(plugin ? themed(url) : url);
+    update();
+    if (!plugin) return;
+    // změna motivu nebo barvy v Classmate se propíše i do vložené stránky
+    const mo = new MutationObserver(update);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-accent"] });
+    return () => mo.disconnect();
+  }, [url, plugin]);
   return (
-    <div className="embed-wrap" style={fill ? { height: "calc(100dvh - 170px)", minHeight: 360 } : undefined}>
-      <iframe
-        src={url}
-        title={title}
-        sandbox={EMBED_SANDBOX}
-        referrerPolicy="no-referrer"
-        loading="lazy"
-        style={{ width: "100%", height: fill ? "100%" : height ?? 300, border: 0, borderRadius: 14, background: "transparent", display: "block" }}
-      />
-      <p className="hint" style={{ margin: "6px 4px 0", fontSize: 12 }}>
-        Nezobrazuje se? Stránka možná vložení zakazuje. <a href={url} target="_blank" rel="noopener noreferrer" className="link-u">Otevřít v nové kartě</a>
-      </p>
+    <div className="embed-wrap" style={fill ? { height: plugin ? "calc(100dvh - 90px)" : "calc(100dvh - 170px)", minHeight: 360 } : undefined}>
+      {src && (
+        <iframe
+          src={src}
+          title={title}
+          sandbox={EMBED_SANDBOX}
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          style={{ width: "100%", height: fill ? "100%" : height ?? 300, border: 0, borderRadius: plugin ? 0 : 14, background: "transparent", display: "block" }}
+        />
+      )}
+      {!plugin && (
+        <p className="hint" style={{ margin: "6px 4px 0", fontSize: 12 }}>
+          Nezobrazuje se? Stránka možná vložení zakazuje. <a href={url} target="_blank" rel="noopener noreferrer" className="link-u">Otevřít v nové kartě</a>
+        </p>
+      )}
     </div>
   );
 }

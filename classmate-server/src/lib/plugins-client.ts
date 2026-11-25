@@ -1,198 +1,152 @@
 /**
- * Osobní vložené stránky a pluginy. Běží jen v prohlížeči.
- *
- * Všechno se ukládá jen v localStorage tohoto prohlížeče: server Classmate adresy vložených stránek ani klíče v nich nikdy nedostane,
- * nikdo jiný je nevidí a na každém zařízení se přidávají zvlášť (jde je přenést exportem do souboru).
- *
- * Plugin je obecný manifest (JSON), který může nabídnout jakákoli služba:
- * {
- *   "format": "classmate-plugin/1",
- *   "name": "Název", "description": "…", "homepage": "https://…",
- *   "widgets": [{ "id": "tyden", "title": "Tento týden", "url": "https://…", "height": 220 }],
- *   "pages":   [{ "id": "denik", "title": "Trénink", "url": "https://…", "icon": "pulse" }],
- *   "layouts": [{ "id": "sportovec", "title": "Sportovec", "widgets": [{ "widget": "tyden", "col": "l", "height": 220 }] }]
- * }
- * Manifest stahuje prohlížeč (služba musí povolit CORS). Neznámá pole se ignorují, texty se zobrazují jen jako prostý text.
+ * Pluginy a vložené weby v prohlížeči: stav drží server (u uživatele, na všech zařízeních), tady je jeho kopie
+ * a funkce pro úpravy. Každá změna se hned uloží na server. Kontrola vstupu a formáty jsou v plugins-core.ts.
  */
+import { savePluginsAction } from "@/app/actions/plugins";
+import {
+  EMPTY_STATE, PluginError, clampHeight, newId, parseManifest, pluginPages, safeUrl, sanitizeState, text, webSite,
+  type Col, type Plugin, type PluginState, type Widget,
+} from "./plugins-core";
 
-export type Col = "l" | "r";
-export type Widget = { id: string; title: string; url: string; height: number; col: Col; plugin?: string };
-export type PluginPage = { id: string; title: string; url: string; icon: string };
-export type Layout = { id: string; title: string; widgets: { widget: string; col: Col; height?: number }[] };
-export type Plugin = {
-  id: string;
-  name: string;
-  description: string;
-  homepage: string;
-  manifestUrl: string;
-  widgets: { id: string; title: string; url: string; height: number }[];
-  pages: PluginPage[];
-  layouts: Layout[];
-};
-export type PluginState = { v: 1; widgets: Widget[]; plugins: Plugin[] };
+export { PluginError, pluginPages, safeUrl };
+export type { Col, Plugin, PluginState, Widget };
 
-const KEY = "classmate.plugins.v1";
 const EVENT = "classmate:plugins";
-const EMPTY: PluginState = { v: 1, widgets: [], plugins: [] };
-const ICONS = new Set(["pulse", "calendar", "caldays", "check", "exam", "book", "pen", "star", "trophy", "sun", "link", "users", "coin", "broom", "settings"]);
+const LEGACY_KEY = "classmate.plugins.v1";
+const g = globalThis as unknown as { __cmPlugins?: PluginState; __cmPluginsUser?: number };
 
-export class PluginError extends Error {}
-
-/* ---------- úložiště ---------- */
-
-export function loadPlugins(): PluginState {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const s = JSON.parse(raw) as PluginState;
-    return s && s.v === 1 && Array.isArray(s.widgets) && Array.isArray(s.plugins) ? s : EMPTY;
-  } catch {
-    return EMPTY;
-  }
+/** Kopie stavu ze serveru; volá ji `PluginsBoot` hned při vykreslení aplikace. */
+export function initPlugins(state: PluginState, userId: number) {
+  if (g.__cmPluginsUser === userId && g.__cmPlugins) return;
+  g.__cmPlugins = state;
+  g.__cmPluginsUser = userId;
 }
 
+export const loadPlugins = (): PluginState => g.__cmPlugins ?? EMPTY_STATE;
+
+let pending: Promise<unknown> = Promise.resolve();
 export function savePlugins(s: PluginState) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(s));
-  } catch {
-    throw new PluginError("Prohlížeč nedovolil nastavení uložit (soukromé okno nebo zablokovaná data webu).");
-  }
+  g.__cmPlugins = s;
   window.dispatchEvent(new Event(EVENT));
+  // ukládání jde po sobě, ať pozdější změna nepřepíše novější
+  pending = pending.catch(() => {}).then(() => savePluginsAction(JSON.stringify(s))).catch(() => window.dispatchEvent(new CustomEvent("classmate:toast", { detail: { title: "Nastavení pluginů se nepodařilo uložit." } })));
 }
 
-/** Zavolá `fn` při každé změně (i z jiné karty). Vrací funkci pro odhlášení. */
 export function onPluginsChange(fn: () => void) {
-  const storage = (e: StorageEvent) => e.key === KEY && fn();
   window.addEventListener(EVENT, fn);
-  window.addEventListener("storage", storage);
-  return () => {
-    window.removeEventListener(EVENT, fn);
-    window.removeEventListener("storage", storage);
-  };
+  return () => window.removeEventListener(EVENT, fn);
 }
 
-/* ---------- kontrola vstupu ---------- */
-
-const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, max) : "");
-const slug = (v: unknown) => text(v, 40).replace(/[^A-Za-z0-9_-]/g, "");
-const height = (v: unknown, def: number) => {
-  const n = Math.round(Number(v));
-  return Number.isFinite(n) && n >= 80 && n <= 1200 ? n : def;
-};
-
-/** Jen https (na localhostu i http kvůli vývoji). Vrací normalizovanou adresu, nebo vyhodí chybu. */
-export function safeUrl(raw: unknown): string {
-  const s = text(raw, 2000);
-  let u: URL;
+/** Jednorázově převezme pluginy uložené dřív jen v tomhle prohlížeči (verze 1) a smaže je odtud. */
+export function migrateLegacy() {
   try {
-    u = new URL(s);
-  } catch {
-    throw new PluginError("Tohle není platná adresa.");
-  }
-  const local = u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1");
-  if (u.protocol !== "https:" && !local) throw new PluginError("Adresa musí začínat https://.");
-  if (u.username || u.password) throw new PluginError("Adresa nesmí obsahovat jméno ani heslo.");
-  return u.toString();
-}
-
-const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-
-export function parseManifest(raw: unknown, manifestUrl: string): Plugin {
-  if (!raw || typeof raw !== "object") throw new PluginError("Manifest není platný JSON objekt.");
-  const m = raw as Record<string, unknown>;
-  if (m.format !== "classmate-plugin/1") throw new PluginError("Neznámý formát manifestu (čekám \"classmate-plugin/1\").");
-  const name = text(m.name, 60);
-  if (!name) throw new PluginError("Manifest nemá název.");
-  const list = (v: unknown, max: number) => (Array.isArray(v) ? v.slice(0, max) : []);
-  const widgets = list(m.widgets, 20).flatMap((w: Record<string, unknown>) => {
-    try {
-      const id = slug(w.id);
-      return id ? [{ id, title: text(w.title, 60) || id, url: safeUrl(w.url), height: height(w.height, 240) }] : [];
-    } catch {
-      return [];
-    }
-  });
-  const pages = list(m.pages, 5).flatMap((p: Record<string, unknown>) => {
-    try {
-      const id = slug(p.id);
-      const icon = text(p.icon, 20);
-      return id ? [{ id, title: text(p.title, 40) || id, url: safeUrl(p.url), icon: ICONS.has(icon) ? icon : "link" }] : [];
-    } catch {
-      return [];
-    }
-  });
-  const ids = new Set(widgets.map((w) => w.id));
-  const layouts = list(m.layouts, 10).flatMap((l: Record<string, unknown>) => {
-    const id = slug(l.id);
-    const ws = list(l.widgets, 20)
-      .map((x: Record<string, unknown>) => ({ widget: slug(x.widget), col: (x.col === "r" ? "r" : "l") as Col, height: x.height === undefined ? undefined : height(x.height, 240) }))
-      .filter((x) => ids.has(x.widget));
-    return id && ws.length ? [{ id, title: text(l.title, 60) || id, widgets: ws }] : [];
-  });
-  if (!widgets.length && !pages.length) throw new PluginError("Manifest nenabízí žádný widget ani stránku.");
-  let homepage = "";
-  try {
-    homepage = m.homepage ? safeUrl(m.homepage) : "";
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return;
+    const old = sanitizeState(JSON.parse(raw));
+    const s = loadPlugins();
+    const known = new Set(s.plugins.map((p) => p.manifestUrl));
+    const plugins = [...s.plugins, ...old.plugins.filter((p) => !known.has(p.manifestUrl))];
+    const ids = new Set(plugins.map((p) => p.id));
+    savePlugins({ v: 2, plugins, widgets: [...s.widgets, ...old.widgets.filter((w) => !w.plugin || ids.has(w.plugin))] });
+    localStorage.removeItem(LEGACY_KEY);
   } catch {}
-  return { id: newId(), name, description: text(m.description, 300), homepage, manifestUrl, widgets, pages, layouts };
 }
 
-/** Stáhne manifest pluginu (prohlížečem, s limitem velikosti a času). */
+/* ---------- hledání pluginu podle adresy webu ---------- */
+
+async function getJson(url: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    if (!res.ok) return null;
+    const body = await res.text();
+    if (body.length > 100_000) throw new PluginError("Manifest je moc velký.");
+    return JSON.parse(body);
+  } catch (e) {
+    if (e instanceof PluginError) throw e;
+    return null;
+  }
+}
+
+/** Stáhne manifest z přesné adresy (starší pluginy a obchod s pluginy). */
 export async function fetchManifest(rawUrl: string): Promise<Plugin> {
   const url = safeUrl(rawUrl);
-  let res: Response;
-  try {
-    res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store", signal: AbortSignal.timeout(15_000) });
-  } catch {
-    throw new PluginError("Manifest se nepodařilo stáhnout. Služba možná nepovoluje přístup z Classmate (CORS), nebo neodpovídá.");
-  }
-  if (!res.ok) throw new PluginError(`Služba odpověděla chybou ${res.status}.`);
-  const body = await res.text();
-  if (body.length > 100_000) throw new PluginError("Manifest je moc velký.");
-  let json: unknown;
-  try {
-    json = JSON.parse(body);
-  } catch {
-    throw new PluginError("Manifest není platný JSON.");
-  }
+  const json = await getJson(url);
+  if (json == null) throw new PluginError("Manifest se nepodařilo stáhnout. Služba možná nepovoluje přístup z Classmate (CORS), nebo neodpovídá.");
   return parseManifest(json, url);
+}
+
+/**
+ * Co web nabízí: plugin (manifest na /.well-known/classmate.json, nebo přímo zadaná adresa .json), jinak obyčejná stránka.
+ * Manifest stahuje prohlížeč bez cookies.
+ */
+export async function discoverSite(rawUrl: string): Promise<Plugin> {
+  const withScheme = /^[a-z]+:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`;
+  const url = safeUrl(withScheme);
+  const u = new URL(url);
+  const tries = /\.json$/i.test(u.pathname) ? [url] : [`${u.origin}/.well-known/classmate.json`];
+  for (const t of tries) {
+    const json = await getJson(t);
+    if (json != null) {
+      try {
+        return parseManifest(json, t);
+      } catch (e) {
+        if (/\.json$/i.test(u.pathname)) throw e;
+      }
+    }
+  }
+  if (/\.json$/i.test(u.pathname)) throw new PluginError("Na téhle adrese není manifest pluginu.");
+  return webSite(url);
 }
 
 /* ---------- úpravy ---------- */
 
-export function addPage(title: string, rawUrl: string, h: number) {
-  const s = loadPlugins();
-  const url = safeUrl(rawUrl);
-  const col: Col = s.widgets.filter((w) => w.col === "l").length <= s.widgets.filter((w) => w.col === "r").length ? "l" : "r";
-  savePlugins({ ...s, widgets: [...s.widgets, { id: newId(), title: text(title, 60) || new URL(url).hostname, url, height: height(h, 300), col }] });
-}
+const freeCol = (s: PluginState): Col => (s.widgets.filter((w) => w.col === "l").length <= s.widgets.filter((w) => w.col === "r").length ? "l" : "r");
 
-/** Přidá (nebo obnoví) plugin. Widgety se přidají jen přes rozvržení nebo ručním výběrem. */
-export function installPlugin(p: Plugin) {
+/** Přidá (nebo obnoví) web či plugin. `menu` = které stránky dát do menu, `widgets` = které widgety přidat na Dnes. */
+export function installPlugin(p: Plugin, opts: { menu?: string[]; widgets?: string[]; title?: string } = {}) {
   const s = loadPlugins();
   const old = s.plugins.find((x) => x.manifestUrl === p.manifestUrl);
-  const plugin = old ? { ...p, id: old.id } : p;
-  savePlugins({ ...s, plugins: [...s.plugins.filter((x) => x.manifestUrl !== p.manifestUrl), plugin] });
+  let plugin: Plugin = { ...p, id: old?.id ?? p.id, menu: opts.menu ? p.pages.filter((pg) => opts.menu!.includes(pg.id)).map((pg) => pg.id) : p.menu };
+  if (plugin.kind === "web" && opts.title?.trim()) {
+    const name = text(opts.title, 40);
+    plugin = { ...plugin, name, pages: plugin.pages.map((pg) => ({ ...pg, title: name })) };
+  }
+  let widgets = s.widgets;
+  for (const wid of opts.widgets ?? []) {
+    const w = plugin.widgets.find((x) => x.id === wid);
+    if (w) widgets = [...widgets, { id: newId(), title: w.title, url: w.url, height: w.height, col: freeCol({ ...s, widgets }), plugin: plugin.id }];
+  }
+  savePlugins({ v: 2, plugins: [...s.plugins.filter((x) => x.manifestUrl !== p.manifestUrl), plugin], widgets });
   return plugin;
+}
+
+export function setMenu(pluginId: string, pageId: string, on: boolean) {
+  const s = loadPlugins();
+  savePlugins({ ...s, plugins: s.plugins.map((p) => (p.id === pluginId ? { ...p, menu: on ? [...new Set([...p.menu, pageId])] : p.menu.filter((x) => x !== pageId) } : p)) });
 }
 
 export function removePlugin(id: string) {
   const s = loadPlugins();
-  savePlugins({ v: 1, plugins: s.plugins.filter((p) => p.id !== id), widgets: s.widgets.filter((w) => w.plugin !== id) });
+  savePlugins({ v: 2, plugins: s.plugins.filter((p) => p.id !== id), widgets: s.widgets.filter((w) => w.plugin !== id) });
 }
 
-/** Přidá jeden widget z pluginu. */
+/** Přidá vlastní widget: libovolnou stránku jako rámeček na Dnes. */
+export function addPage(title: string, rawUrl: string, h: number) {
+  const s = loadPlugins();
+  const url = safeUrl(rawUrl);
+  savePlugins({ ...s, widgets: [...s.widgets, { id: newId(), title: text(title, 60) || new URL(url).hostname, url, height: clampHeight(h, 300), col: freeCol(s) }] });
+}
+
 export function addPluginWidget(pluginId: string, widgetId: string) {
   const s = loadPlugins();
   const p = s.plugins.find((x) => x.id === pluginId);
   const w = p?.widgets.find((x) => x.id === widgetId);
   if (!p || !w) return;
-  const col: Col = s.widgets.filter((x) => x.col === "l").length <= s.widgets.filter((x) => x.col === "r").length ? "l" : "r";
-  savePlugins({ ...s, widgets: [...s.widgets, { id: newId(), title: w.title, url: w.url, height: w.height, col, plugin: p.id }] });
+  savePlugins({ ...s, widgets: [...s.widgets, { id: newId(), title: w.title, url: w.url, height: w.height, col: freeCol(s), plugin: p.id }] });
 }
 
-/** Použije doporučené rozvržení pluginu: nahradí widgety tohoto pluginu na nástěnce, ostatní nechá. */
-export function applyLayout(pluginId: string, layoutId: string) {
+/** Použije doporučené rozvržení: `replace` nahradí widgety tohoto pluginu na Dnes, jinak se přidají k nim. */
+export function applyLayout(pluginId: string, layoutId: string, mode: "replace" | "append" = "replace") {
   const s = loadPlugins();
   const p = s.plugins.find((x) => x.id === pluginId);
   const l = p?.layouts.find((x) => x.id === layoutId);
@@ -201,12 +155,13 @@ export function applyLayout(pluginId: string, layoutId: string) {
     const w = p.widgets.find((y) => y.id === x.widget);
     return w ? [{ id: newId(), title: w.title, url: w.url, height: x.height ?? w.height, col: x.col, plugin: p.id }] : [];
   });
-  savePlugins({ ...s, widgets: [...added, ...s.widgets.filter((w) => w.plugin !== p.id)] });
+  const rest = mode === "replace" ? s.widgets.filter((w) => w.plugin !== p.id) : s.widgets;
+  savePlugins({ ...s, widgets: mode === "replace" ? [...added, ...rest] : [...rest, ...added] });
 }
 
 export function updateWidget(id: string, patch: Partial<Pick<Widget, "title" | "height" | "col">>) {
   const s = loadPlugins();
-  savePlugins({ ...s, widgets: s.widgets.map((w) => (w.id === id ? { ...w, ...patch, height: patch.height ? height(patch.height, w.height) : w.height } : w)) });
+  savePlugins({ ...s, widgets: s.widgets.map((w) => (w.id === id ? { ...w, ...patch, height: patch.height ? clampHeight(patch.height, w.height) : w.height } : w)) });
 }
 
 export function moveWidget(id: string, dir: -1 | 1) {
@@ -218,9 +173,9 @@ export function moveWidget(id: string, dir: -1 | 1) {
   const pos = same.findIndex((x) => x.k === i);
   const other = same[pos + dir];
   if (!other) return;
-  const list = [...s.widgets];
-  [list[i], list[other.k]] = [list[other.k], list[i]];
-  savePlugins({ ...s, widgets: list });
+  const items = [...s.widgets];
+  [items[i], items[other.k]] = [items[other.k], items[i]];
+  savePlugins({ ...s, widgets: items });
 }
 
 export function removeWidget(id: string) {
@@ -228,37 +183,18 @@ export function removeWidget(id: string) {
   savePlugins({ ...s, widgets: s.widgets.filter((w) => w.id !== id) });
 }
 
-/** Všechny stránky pluginů pro menu. */
-export const pluginPages = (s: PluginState) => s.plugins.flatMap((p) => p.pages.map((pg) => ({ ...pg, plugin: p.id, href: `/plugin?p=${encodeURIComponent(p.id)}&s=${encodeURIComponent(pg.id)}` })));
+/* ---------- vzhled vložených pluginů ---------- */
 
-/* ---------- přenos mezi zařízeními ---------- */
-
-export function exportPlugins(): string {
-  return JSON.stringify({ ...loadPlugins(), exportedAt: new Date().toISOString() }, null, 2);
-}
-
-export function importPlugins(raw: string) {
-  let j: PluginState;
+/** Ke stránkám a widgetům pluginu se přidá motiv a barva Classmate, ať vypadají jako jeho součást (`?theme=…&accent=…`). */
+export function themed(url: string): string {
   try {
-    j = JSON.parse(raw);
+    const u = new URL(url);
+    const d = document.documentElement;
+    const theme = d.dataset.theme ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    u.searchParams.set("theme", theme);
+    u.searchParams.set("accent", d.dataset.accent ?? "mint");
+    return u.toString();
   } catch {
-    throw new PluginError("Soubor není platný JSON.");
+    return url;
   }
-  if (!j || j.v !== 1 || !Array.isArray(j.widgets) || !Array.isArray(j.plugins)) throw new PluginError("Tohle není export widgetů z Classmate.");
-  const plugins = j.plugins.slice(0, 30).flatMap((p) => {
-    try {
-      return [{ ...parseManifest({ format: "classmate-plugin/1", name: p.name, description: p.description, homepage: p.homepage, widgets: p.widgets, pages: p.pages, layouts: p.layouts }, safeUrl(p.manifestUrl)), id: slug(p.id) || newId() }];
-    } catch {
-      return [];
-    }
-  });
-  const pluginIds = new Set(plugins.map((p) => p.id));
-  const widgets = j.widgets.slice(0, 40).flatMap((w) => {
-    try {
-      return [{ id: slug(w.id) || newId(), title: text(w.title, 60), url: safeUrl(w.url), height: height(w.height, 300), col: (w.col === "r" ? "r" : "l") as Col, plugin: w.plugin && pluginIds.has(w.plugin) ? w.plugin : undefined }];
-    } catch {
-      return [];
-    }
-  });
-  savePlugins({ v: 1, plugins, widgets });
 }

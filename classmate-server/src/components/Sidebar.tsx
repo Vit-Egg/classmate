@@ -2,6 +2,7 @@
 
 import { tapVersion } from "@/lib/version-egg";
 import { loadPlugins, onPluginsChange, pluginPages } from "@/lib/plugins-client";
+import { useSearchParams } from "next/navigation";
 import { versionLabel, versionTitle } from "@/lib/version";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -61,7 +62,7 @@ function ring(ctx: AudioContext) {
   }
 }
 
-export function Sidebar({ school, className, isAdmin, slots, unread: initialUnread, study = false, cash = false, duty = false, board = false, boardNew = 0, me }: { me: { name: string; src: string | null }; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number }) {
+export function Sidebar({ plugins, school, className, isAdmin, slots, unread: initialUnread, study = false, cash = false, duty = false, board = false, boardNew = 0, me }: { me: { name: string; src: string | null }; plugins?: ReturnType<typeof pluginPages>; school: string; className: string; isAdmin: boolean; slots: Slot[]; unread: number; study?: boolean; cash?: boolean; duty?: boolean; board?: boolean; boardNew?: number }) {
   const path = usePathname();
   const logo = useRef<HTMLButtonElement>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -98,8 +99,9 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
     } catch {}
   };
 
-  // stránky pluginů z tohoto prohlížeče (adresy zná jen prohlížeč, server ne)
-  const [pluginLinks, setPluginLinks] = useState<ReturnType<typeof pluginPages>>([]);
+  // stránky přidaných webů a pluginů (uložené u uživatele na serveru, první vykreslení dostane z layoutu)
+  const sp = useSearchParams();
+  const [pluginLinks, setPluginLinks] = useState<ReturnType<typeof pluginPages>>(plugins ?? []);
   useEffect(() => {
     const read = () => setPluginLinks(pluginPages(loadPlugins()));
     read();
@@ -164,7 +166,7 @@ export function Sidebar({ school, className, isAdmin, slots, unread: initialUnre
               <span className="nav-sep" aria-hidden />
               <div className="nav-items">
                 {pluginLinks.map((p) => (
-                  <Link key={p.href} href={p.href} title={p.title} className="nav-more" aria-current={path.startsWith("/plugin") && typeof window !== "undefined" && window.location.search.includes(`s=${encodeURIComponent(p.id)}`) ? "page" : undefined}>
+                  <Link key={p.href} href={p.href} title={p.title} className="nav-more" aria-current={path.startsWith("/plugin") && sp.get("p") === p.plugin && sp.get("s") === p.id ? "page" : undefined}>
                     <Icon name={p.icon} />
                     <span className="nav-label">{p.title}</span>
                   </Link>

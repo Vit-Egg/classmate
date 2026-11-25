@@ -1270,4 +1270,15 @@ ALTER TABLE users ADD COLUMN invite_email TEXT;
 ALTER TABLE duty_weeks ADD COLUMN manual INTEGER NOT NULL DEFAULT 0;
 `,
   },
+  {
+    id: 81,
+    sql: `
+-- Pluginy a vložené weby uživatele (stránky v menu, widgety na Dnes). Jen jeho, na všech zařízeních. Obsah je JSON (src/lib/plugins-core.ts).
+CREATE TABLE IF NOT EXISTS user_plugins (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+`,
+  },
 ];

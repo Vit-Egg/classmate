@@ -1,70 +1,130 @@
-# Pluginy a vlastní widgety
+# Jak udělat plugin pro Classmate
 
-Každý si na stránku **Dnes** může připnout vlastní widgety: libovolnou stránku z jiné služby, nebo celý **plugin**. Plugin může nabídnout widgety, stránku do menu a doporučené rozvržení nástěnky.
+Plugin je obyčejný web, který Classmate umí vložit tak, aby vypadal jako jeho součást: **stránky v menu**, **widgety na stránce Dnes** a **doporučené rozvržení** widgetů. Uživatel v Classmate zadá jen adresu webu (**Nastavení → Pluginy a weby → Přidat web**), žádné klíče ani dlouhé adresy.
 
-Všechno se ukládá **jen v prohlížeči uživatele** (localStorage). Server Classmate adresy widgetů, manifesty ani klíče v nich nikdy nedostane, takže nevidí ani data, která widgety ukazují. Spolužáci cizí widgety nevidí. Na jiné zařízení se nastavení přenese exportem do souboru (Nastavení → Pluginy a widgety).
+Hotové příklady: [classmate by vitegg modifikovaný pro selfhosting](https://github.com/Vit-Egg/classmate-by-vitegg-modifikovany-pro-selfhosting) (`lite/` a `full/`). Společný kód pluginu je tam v `src/lib/embed/core.ts`, `src/components/CmLogin.tsx`, `src/components/EmbedWidget.tsx` a `src/lib/embed/cm.css`.
 
-Kód: `src/lib/plugins-client.ts`, `src/components/PluginSettings.tsx`, `src/components/PersonalWidgets.tsx`, `src/components/EmbedFrame.tsx`.
+V Classmate: `src/lib/plugins-core.ts` (formáty a kontrola), `src/lib/plugins-client.ts` (přidání, rozvržení), `src/components/PluginSettings.tsx`, `src/components/EmbedFrame.tsx`. Přidané weby a widgety se ukládají k uživateli na server (tabulka `user_plugins`), takže je má na všech zařízeních a nikdo jiný je nevidí.
 
-## Manifest pluginu
+## Jak to funguje
 
-Služba nabídne soubor JSON na adrese `https://…`, třeba `https://moje-sluzba.cz/embed/widgets.json?k=TAJNY_KLIC`:
+```
+Uživatel zadá https://muj-web.cz
+        │
+        ▼
+Classmate stáhne https://muj-web.cz/.well-known/classmate.json
+        │
+        ├─ není tam → web se přidá jako jedna stránka do menu
+        │
+        └─ je tam → Classmate nabídne:
+              ☑ stránky do menu (každá jako vlastní položka, třeba Rozvrh, Známky, Obědy)
+              ☑ widgety na Dnes
+              ◉ rozvržení widgetů („Klasický Classmate“) – nahradit, nebo přidat k ostatním
+```
+
+Stránky i widgety Classmate načítá v rámu (`<iframe>`) přímo z tvého webu. Server Classmate data pluginu nikdy nevidí.
+
+## 1. Manifest
+
+Na adrese `/.well-known/classmate.json` vrať JSON s hlavičkou `Access-Control-Allow-Origin: *` (manifest stahuje prohlížeč a je veřejný, nedávej do něj nic tajného):
 
 ```json
 {
-  "format": "classmate-plugin/1",
-  "name": "Tréninkový deník",
-  "description": "Tréninky, reflexe a trofeje.",
-  "homepage": "https://treninky.vitegg.com",
-  "widgets": [
-    { "id": "tyden", "title": "Tento týden", "url": "https://treninky.vitegg.com/embed/tyden?k=…", "height": 220 },
-    { "id": "posledni", "title": "Poslední aktivita", "url": "https://treninky.vitegg.com/embed/posledni?k=…", "height": 200 }
-  ],
+  "format": "classmate-plugin/2",
+  "name": "Bakaláři a obědy",
+  "description": "Rozvrh, známky a obědy z mého serveru.",
+  "icon": "star",
   "pages": [
-    { "id": "denik", "title": "Trénink", "url": "https://treninky.vitegg.com/embed/denik?k=…", "icon": "pulse" }
+    { "id": "rozvrh", "title": "Rozvrh z Bakalářů", "path": "/rozvrh", "icon": "calendar" },
+    { "id": "znamky", "title": "Známky", "path": "/znamky", "icon": "star" },
+    { "id": "obedy", "title": "Obědy", "path": "/obedy", "icon": "utensils" }
+  ],
+  "widgets": [
+    { "id": "rozvrh", "title": "Rozvrh", "path": "/embed/rozvrh", "height": 340 },
+    { "id": "znamky", "title": "Poslední známky", "path": "/embed/znamky", "height": 300 },
+    { "id": "obedy", "title": "Obědy", "path": "/embed/obedy", "height": 280 }
   ],
   "layouts": [
-    { "id": "sportovec", "title": "Sportovec", "widgets": [{ "widget": "tyden", "col": "l" }, { "widget": "posledni", "col": "r", "height": 240 }] }
+    {
+      "id": "klasicky",
+      "title": "Klasický Classmate",
+      "widgets": [
+        { "widget": "rozvrh", "col": "l" },
+        { "widget": "znamky", "col": "l" },
+        { "widget": "obedy", "col": "r", "height": 260 }
+      ]
+    }
   ]
 }
 ```
 
 | Pole | Význam |
-| --- | --- |
-| `format` | vždy `classmate-plugin/1` |
-| `name`, `description`, `homepage` | název (max. 60 znaků), popis (max. 300), domovská stránka |
-| `widgets` | max. 20 widgetů: `id` (písmena, číslice, `-`, `_`), `title`, `url` (jen `https://`), `height` v pixelech (80–1200) |
-| `pages` | max. 5 stránek do menu: `id`, `title`, `url`, `icon` (např. `pulse`, `calendar`, `book`, `star`, `trophy`, `link`) |
-| `layouts` | max. 10 doporučených rozvržení: `id`, `title` a seznam widgetů s `col` (`l` vlevo, `r` vpravo) a volitelnou `height` |
+|---|---|
+| `format` | vždy `classmate-plugin/2` |
+| `name`, `description` | název (max. 60 znaků) a popis (max. 300) |
+| `icon` | ikona: `calendar`, `caldays`, `star`, `absence`, `mail`, `utensils`, `check`, `exam`, `pen`, `book`, `cap`, `pulse`, `trophy`, `sun`, `pin`, `bell`, `file`, `users`, `coin`, `broom`, `settings`, `link` |
+| `pages` | max. 12 stránek do menu: `id` (písmena, číslice, `-`, `_`), `title` (max. 40), `path`, `icon`. Uživatel si vybere, které chce. |
+| `widgets` | max. 20 widgetů: `id`, `title`, `path`, `height` v pixelech (80–1200) |
+| `layouts` | max. 10 rozvržení: `id`, `title` a seznam `widgets` s `col` (`l` vlevo, `r` vpravo) a volitelnou `height` |
 
-Neznámá pole se ignorují a texty se zobrazují jen jako prostý text.
+- `path` je **cesta na tvém webu** (začíná `/`). Adresy na jiný web Classmate zahodí.
+- Neznámá pole se ignorují, texty se zobrazují jen jako prostý text.
+- Stačí jen stránky, nebo jen widgety. Plugin bez widgetů je třeba web s několika položkami do menu.
 
-## Požadavky na službu
+## 2. Dovol vložení
 
-- **CORS:** manifest stahuje prohlížeč, takže služba musí u manifestu poslat `Access-Control-Allow-Origin` s adresou Classmate (např. `https://classmate.cz`).
-- **Vložení:** embed stránky musí povolit vložení do Classmate hlavičkou `Content-Security-Policy: frame-ancestors https://classmate.cz`. Bez ní widget ukáže jen odkaz na otevření v nové kartě.
-- **Přístup:** cookies se v cizím iframe často blokují (Safari), proto embed stránky a manifest používají tajný klíč v adrese (`?k=…`). Klíč má dovolit jen čtení embedů a musí jít ve službě kdykoli zneplatnit.
-- Widgety běží v iframe se `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`: smí otevřít vyskakovací okno (třeba přihlášení do služby), ale nemůžou přesměrovat samotný Classmate. Vyskakovací okno zůstává v sandboxu, takže ani ono kartu s Classmate nepřesměruje.
+Rám má `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`: plugin smí otevřít vyskakovací okno (třeba přihlášení nebo objednání oběda), ale nemůže přesměrovat samotný Classmate. Vyskakovací okno zůstává v sandboxu, takže ani ono kartu s Classmate nepřesměruje.
 
-## Obchod s pluginy
+Classmate tvoje stránky vkládá do rámu. Pošli u všech stránek a widgetů hlavičku:
 
-Ověřené pluginy jsou v souboru [`plugins/store.json`](plugins/store.json). Seznam schvaluje jen vlastník repozitáře a patří do něj jen pluginy, které nepracují s cizími systémy bez dovolení.
-
-Položka obchodu:
-
-```json
-{ "id": "treninkovy-denik", "name": "…", "description": "…", "icon": "pulse", "source": "https://github.com/…", "service": "https://…", "connectPath": "/classmate/connect" }
+```
+Content-Security-Policy: frame-ancestors 'self' https://classmate.cz
 ```
 
-### Propojení bez kopírování adres
+kde `https://classmate.cz` je adresa Classmate, ve kterém má plugin běžet. V `lite/` a `full/` se nastavuje proměnnou `EMBED_ORIGINS` v `.env`. Nepovoluj vložení odkudkoli (`*`), jinak by tvoje stránky mohl vložit kdokoli (clickjacking).
 
-1. Tlačítko **Přidat** otevře v novém okně `https://<služba><connectPath>?origin=<adresa Classmate>`. Uživatel si může zadat i vlastní adresu služby, pokud ji hostuje sám.
-2. Uživatel se ve službě přihlásí a potvrdí propojení. Služba vytvoří klíč jen pro čtení embedů.
-3. Služba pošle adresu manifestu zpět oknu Classmate:
+Rám má sandbox `allow-scripts allow-same-origin allow-forms allow-popups`: stránka smí používat JavaScript, formuláře a otevřít okno s přihlášením, ale nesmí přesměrovat celý Classmate.
+
+## 3. Vypadej jako Classmate
+
+Ke každé adrese stránky i widgetu Classmate přidá `?theme=light|dark&accent=<barva>` (`mint`, `blue`, `cyan`, `violet`, `pink`, `red`, `orange`, `yellow`, `graphite`). Při změně motivu v Classmate se rám načte znovu.
+
+Doporučení:
+- **V rámu schovej vlastní menu a pozadí.** Stačí v `<head>` zjistit `window.self !== window.top` a přidat třídu na `<html>`. Hotový skript je `CM_FRAME_SCRIPT` v `src/lib/embed/core.ts` (přidá třídu `in-cm` a převezme motiv a barvu, i pro další stránky v rámu).
+- **Widget:** nadpis kreslí Classmate nad rámem, ve widgetu ho neopakuj. Obsah dej do karty, pozadí stránky nech průhledné.
+- **Stránka v menu:** Classmate kolem ní nic nekreslí. Nadpis stránky (`h1`) a obsah jsou tvoje.
+- Barvy, písma a třídy Classmate jsou v `src/app/globals.css` (a v repozitáři pro selfhosting v `src/lib/embed/cm.css`). Kdo je převezme, bude vypadat stejně.
+
+## 4. Přihlášení (bez klíčů v adrese)
+
+Prohlížeče v cizím rámu běžné cookies neposílají. Proto:
+
+1. Když stránka nebo widget v rámu nemá relaci, ukáže tlačítko **Přihlásit se**.
+2. Tlačítko otevře okno `/classmate/login` na tvém webu. Tam se uživatel přihlásí normálně (i s dvoufázovým ověřením).
+3. Okno vytvoří **jednorázový token** (platí 2 minuty) a pošle ho rámu, který ho otevřel:
    ```js
-   window.opener.postMessage({ type: "classmate-plugin", manifest: "https://sluzba/embed/widgets.json?k=…" }, originZParametru);
+   window.opener.postMessage({ type: "classmate-login", token }, location.origin);
+   window.close();
    ```
-   Classmate přijme zprávu jen z otevřeného okna a jen z adresy služby. Manifest musí být na stejné adrese jako služba.
-4. Classmate stáhne manifest, nabídne doporučené rozvržení a přidá stránky pluginu do menu.
+4. Rám token pošle na `POST /classmate/session` a server odpoví **dělenou cookie** (CHIPS):
+   ```
+   Set-Cookie: sid=…; Path=/; HttpOnly; Secure; SameSite=None; Partitioned
+   ```
+   Taková cookie platí jen pro tvůj web vložený v Classmate. Pak se rám načte znovu.
 
-Odpojení: v Classmate plugin odebrat a ve službě klíč zneplatnit.
+Okno s přihlášením (`/classmate/login`) se samo vkládat nesmí (`frame-ancestors 'none'`). Funguje v Chrome, Edge, Firefoxu a novém Safari. Hotová komponenta: `CmLogin` a `CmLoginDone` v `src/components/CmLogin.tsx`, endpoint v `src/app/classmate/session/route.ts`.
+
+Když plugin nic přihlašovat nepotřebuje (veřejná data), tenhle krok vynech.
+
+## 5. Vyzkoušej
+
+1. Spusť Classmate a svůj plugin, do `EMBED_ORIGINS` (nebo `frame-ancestors`) dej adresu Classmate.
+2. V Classmate: **Nastavení → Pluginy a weby → Přidat web**, zadej adresu svého webu.
+3. Vyber stránky, widgety nebo rozvržení a přidej.
+4. Zkontroluj stránky v menu a widgety na Dnes ve světlém i tmavém motivu, na telefonu i na počítači.
+
+Kontrola manifestu: `curl -i https://muj-web.cz/.well-known/classmate.json` musí vrátit `200`, JSON a `Access-Control-Allow-Origin: *`.
+
+## Starší formát `classmate-plugin/1`
+
+Manifest na libovolné adrese s absolutními adresami (často s tajným klíčem `?k=`). Classmate ho pořád umí (přidání přes obchod s pluginy, nebo zadáním přímé adresy `.json`), ale pro nové pluginy použij verzi 2.

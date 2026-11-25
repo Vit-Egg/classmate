@@ -71,7 +71,7 @@ const GROUPS = [
   { id: "oznameni", label: "Oznámení", sub: "Co a jak ti má chodit", color: "#ef5b5b", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zM13.7 21a2 2 0 0 1-3.4 0" },
   { id: "skola", label: "Škola a předměty", sub: "Skupiny, zdroj rozvrhu a kalendář", color: "#34b27b", icon: "M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5" },
   { id: "propojeni", label: "Propojení", sub: "Todoist, AI aplikace", color: "#f0a030", icon: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" },
-  { id: "pluginy", label: "Pluginy a widgety", sub: "Vlastní widgety na Dnes, obchod s pluginy", color: "#2bb3a3", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM17 13v7M13.5 16.5h7" },
+  { id: "pluginy", label: "Pluginy a weby", sub: "Weby a pluginy v menu, widgety na Dnes", color: "#2bb3a3", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM17 13v7M13.5 16.5h7" },
   { id: "ucet", label: "Účet a zabezpečení", sub: "Heslo, ověření, export dat", color: "#8b6cf0", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
   { id: "aplikace", label: "O aplikaci", sub: "Verze, novinky, podpora", color: "#7b8794", icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01" },
 ];

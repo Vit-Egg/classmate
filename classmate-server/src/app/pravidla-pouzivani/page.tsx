@@ -5,7 +5,7 @@ export const metadata = { title: "Pravidla používání" };
 // provozovatel a kontakt se čtou z .env až za běhu
 export const dynamic = "force-dynamic";
 
-const UPDATED = "24. listopadu 2026";
+const UPDATED = "25. listopadu 2026";
 
 export default function Terms() {
   const op = operator();
@@ -29,7 +29,8 @@ export default function Terms() {
         <li>Účet je osobní. Nepůjčuj ho a heslo nikomu neříkej. Doporučujeme zapnout dvoufázové ověření.</li>
         <li>Pozvánku nepřeposílej, patří jen tobě.</li>
         <li>Když máš podezření, že tvůj účet používá někdo jiný, změň heslo a dej vědět správci.</li>
-        <li>Aplikace je pro studenty od 15 let. Mladší ji smí používat jen se souhlasem zákonného zástupce.</li>
+        <li>Aplikace je pro studenty od 15 let. Mladší ji smí používat jen se souhlasem zákonného zástupce. Při registraci to potvrzuješ.</li>
+        <li>E-mail u účtu musí být tvůj a funkční: chodí na něj obnova hesla a upozornění, která si zapneš.</li>
       </ul>
 
       <h2 id="chovani">3. Jak se chovat</h2>
@@ -63,15 +64,27 @@ export default function Terms() {
         nebo správce. Provozovatel aplikace za platby mezi spolužáky neručí; reklamace řeš s pokladníkem třídy.
       </p>
 
-      <h2 id="rozvrh">7. Rozvrh a osobní kalendář</h2>
+      <h2 id="rozvrh">7. Rozvrh, volna a osobní kalendář</h2>
       <p>
-        Stálý rozvrh zadává správce ručně a může obsahovat chyby. Změny rozvrhu se ti ukážou jen tehdy, když si propojíš vlastní kalendář (například
-        z vlastního nástroje, který si provozuješ sám, nebo z Google kalendáře). Za obsah a dostupnost takového kalendáře odpovídáš ty
-        a jeho zdroj; závazné jsou vždy informace od školy.
+        Stálý rozvrh, prázdniny, volna a změny pro třídu zadává správce ručně a může v nich udělat chybu. Státní svátky se doplňují automaticky.
+        Každý si může vybrat, odkud se mu rozvrh bere: rozvrh třídy, vlastní rozvrh, který si postaví sám, vlastní kalendář (například Google kalendář),
+        nebo widget místo rozvrhu. Za vlastní rozvrh, kalendář a widget odpovídáš ty a jejich zdroj. Závazné jsou vždy informace od školy, třídního učitele a vyučujících.
+      </p>
+
+      <h2 id="widgety">7a. Widgety a pluginy jiných služeb</h2>
+      <p>
+        Do aplikace si můžeš vložit stránky a pluginy jiných služeb. Jsou to cizí služby: provozuje je někdo jiný, mají vlastní pravidla a provozovatel Classmate
+        za ně ani za jejich obsah neodpovídá. Přidávej jen služby, kterým věříš, a neposílej jim přihlašovací údaje k jiným účtům, když si nejsi jistý(á), komu patří.
+      </p>
+
+      <h2 id="emaily">7b. E-maily</h2>
+      <p>
+        Servisní e-maily (pozvánka, ověření adresy, obnova hesla) posíláme vždy, když jsou potřeba. Upozornění (nové úkoly a testy, „zítra test“, nástěnka a podobně)
+        chodí e-mailem jen tehdy, když si je zapneš v Nastavení, a odhlásíš je jedním kliknutím v patičce každého e-mailu. Žádnou reklamu ani newslettery neposíláme.
       </p>
 
       <h2 id="ai">8. Umělá inteligence</h2>
-      <p>Souhrny a sady k učení vytvořené umělou inteligencí můžou obsahovat chyby. Ber je jako pomůcku a ověřuj si je v učebnici nebo u učitele.</p>
+      <p>Souhrny, sady k učení a rozvrh přečtený z fotky nebo PDF, které vytvoří umělá inteligence, můžou obsahovat chyby. Ber je jako pomůcku: učivo si ověřuj v učebnici nebo u učitele a rozvrh před uložením zkontroluj.</p>
 
       <h2 id="dostupnost">9. Dostupnost a odpovědnost</h2>
       <p>

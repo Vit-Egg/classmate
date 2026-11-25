@@ -33,7 +33,7 @@ export function RegisterForm({ code, name, className, next }: { code: string; na
             <Link href="/zasady-ochrany-osobnich-udaju" className="link-u" target="_blank">
               zásady ochrany osobních údajů
             </Link>
-            .
+            . Je mi aspoň 15 let, nebo s tím souhlasí můj zákonný zástupce.
           </span>
         </label>
         <div style={{ height: 4 }} />

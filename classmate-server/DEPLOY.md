@@ -20,7 +20,7 @@ Jsou dvě cesty:
    - `SETUP_TOKEN`: libovolný kód pro první spuštění,
    - `OPERATOR_NAME` a `CONTACT_EMAIL`: kdo aplikaci provozuje (ukazuje se v zásadách ochrany osobních údajů),
    - `TUNNEL_TOKEN`: token z kroku 2,
-   - volitelně `SMTP_*`, aby šly e-maily (pozvánky, zapomenuté heslo).
+   - `SMTP_*` pro e-maily (pozvánky, zapomenuté heslo, upozornění), viz sekce E-maily níže.
 4. **První spuštění.** Otevři svou adresu. Aplikace tě pošle na průvodce (`/zprovozneni`), kde zadáš `SETUP_TOKEN` a vytvoříš účet vlastníka, školu a třídu.
 5. **Třída.** Ve Správě zadej rozvrh (Rozvrh třídy), seznam studentů a rozešli pozvánky.
 
@@ -72,3 +72,20 @@ Databáze se při startu sama převede na novou verzi (migrace v `src/lib/migrat
 - Průvodce prvním spuštěním jde použít jen jednou, dokud v databázi není žádný uživatel, a je zamčený kódem `SETUP_TOKEN`.
 - Registrace je jen na pozvánku.
 - Kontejner běží jako neprivilegovaný uživatel bez linuxových oprávnění (`cap_drop: ALL`).
+
+
+## E-maily (doporučeno)
+
+Bez e-mailu nejde obnovit zapomenuté heslo (musí ho nastavit správce), poslat pozvánku e-mailem ani posílat upozornění. Stačí jakýkoli SMTP server:
+
+| Možnost | Nastavení | Poznámka |
+| --- | --- | --- |
+| Gmail | `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=tvuj@gmail.com`, `SMTP_PASS=<heslo aplikace>`, `SMTP_FROM=Classmate <tvuj@gmail.com>` | Nejrychlejší. Heslo aplikace vytvoříš v účtu Google (nutné dvoufázové ověření). Limit asi 500 e-mailů denně, pro třídu stačí. Odesílatel musí být ten Gmail. |
+| Seznam.cz | `SMTP_HOST=smtp.seznam.cz`, `SMTP_PORT=465`, `SMTP_USER=adresa@seznam.cz`, `SMTP_PASS=<heslo>` | Podobné jako Gmail, české servery. |
+| Vlastní doména (např. Brevo, Resend, Forward Email) | údaje od služby | Hezčí odesílatel (`classmate@tvoje-domena.cz`) a lepší doručitelnost. V DNS (Cloudflare) je potřeba přidat záznamy SPF a DKIM podle návodu služby. |
+
+Pak:
+
+1. Doplň `SMTP_*` do nastavení kontejneru a volitelně `SMTP_PROVIDER_NAME` (název služby, ukáže se v zásadách ochrany osobních údajů).
+2. Restartuj kontejner.
+3. Ve **Správě → E-maily** pošli zkušební e-mail a zkontroluj, že nepřišel do spamu.

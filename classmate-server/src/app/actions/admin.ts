@@ -8,7 +8,9 @@ import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/action";
 import { redirect } from "next/navigation";
 import { get } from "@/lib/db";
-import { createInvite, InviteError } from "@/lib/invites";
+import { checkInvite, createInvite, INVITE_DAYS, InviteError } from "@/lib/invites";
+
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 async function guard(fn: (admin: Awaited<ReturnType<typeof requireAdmin>>) => void): Promise<ActionState> {
   const admin = await requireAdmin();
@@ -112,3 +114,58 @@ export const renameClassAndSchool = async (_: ActionState, fd: FormData) =>
     svc.adminRenameClass(a, Number(fd.get("class")), fd.get("className"));
     svc.adminUpdateSchool(a, Number(fd.get("school")), fd.get("schoolName"), null);
   });
+
+/** Správa → Členové: odešle připravenou pozvánku e-mailem. Adresa se nikam neukládá, slouží jen k doručení odkazu. */
+export async function sendInviteMailAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const admin = await requirePermission("clenove");
+  const { mailConfigured, sendMail } = await import("@/lib/mail");
+  const { layout } = await import("@/lib/email-notify");
+  const { siteUrl } = await import("@/lib/site");
+  if (!mailConfigured()) return { error: "Server zatím neumí posílat e-maily (chybí nastavení SMTP)." };
+  const code = String(fd.get("code") ?? "");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: "Napiš platný e-mail." };
+  const inv = checkInvite(code);
+  if (!inv) return { error: "Pozvánka už neplatí. Vytvoř novou." };
+  const link = `${siteUrl()}/registrace?kod=${encodeURIComponent(code)}`;
+  const first = inv.name.split(/\s+/)[0];
+  try {
+    await sendMail({
+      to: email,
+      subject: `Pozvánka do Classmate třídy ${inv.className}`,
+      text: `Ahoj ${first},\n\n${admin.name} tě zve do Classmate, aplikace naší třídy ${inv.className} (úkoly, testy, rozvrh, poznámky).\n\nÚčet si založíš tady (odkaz platí ${INVITE_DAYS} dní a jde použít jen jednou):\n${link}\n\nOdkaz nikomu nepřeposílej, patří jen tobě. Pokud pozvánku nečekáš, e-mail smaž.`,
+      html: layout(
+        `Pozvánka do třídy ${esc(inv.className)}`,
+        `<p style="margin:0 0 12px;line-height:1.55">Ahoj ${esc(first)}, <b>${esc(admin.name)}</b> tě zve do Classmate, aplikace naší třídy: úkoly, testy, rozvrh a poznámky na jednom místě.</p><p style="margin:0;line-height:1.55">Odkaz platí ${INVITE_DAYS} dní a jde použít jen jednou. Nikomu ho nepřeposílej, patří jen tobě.</p>`,
+        "Pokud pozvánku nečekáš, e-mail klidně smaž. Bez kliknutí na odkaz se nic nestane.",
+        { label: "Založit účet", url: link },
+      ),
+    });
+  } catch (e) {
+    console.error("invite mail", e);
+    return { error: "E-mail se nepodařilo odeslat. Zkontroluj nastavení SMTP, nebo pošli odkaz jinak." };
+  }
+  audit(admin, "invite_mail", { targetUser: { id: inv.userId, name: inv.name } });
+  return { ok: true, message: `Pozvánka odešla na ${email}.` };
+}
+
+/** Správa: zkušební e-mail na adresu správce, aby šlo ověřit nastavení SMTP. */
+export async function sendTestMailAction(_: ActionState, _fd: FormData): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const { mailConfigured, sendMail } = await import("@/lib/mail");
+  const { layout } = await import("@/lib/email-notify");
+  if (!mailConfigured()) return { error: "Chybí nastavení SMTP (SMTP_HOST a SMTP_FROM)." };
+  try {
+    await sendMail({
+      to: admin.email,
+      subject: "Classmate: zkušební e-mail",
+      text: "Tohle je zkušební e-mail z Classmate. Když ho čteš, odesílání e-mailů funguje.",
+      html: layout("Zkušební e-mail", `<p style="margin:0;line-height:1.55">Když tohle čteš, odesílání e-mailů z Classmate funguje. Zkontroluj ještě, že e-mail nepřišel do spamu.</p>`, "Odeslal(a) sis ho ze Správy."),
+    });
+  } catch (e) {
+    console.error("test mail", e);
+    return { error: `Odeslání selhalo: ${e instanceof Error ? e.message.slice(0, 200) : "neznámá chyba"}` };
+  }
+  audit(admin, "mail_test", {});
+  return { ok: true, message: `Odesláno na ${admin.email}. Mrkni i do spamu.` };
+}

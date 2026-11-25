@@ -19,6 +19,8 @@ export const AUDIT_ACTIONS = {
   calendar_connect: { label: "Propojení osobního kalendáře", cat: "ucet" },
   calendar_disconnect: { label: "Odpojení osobního kalendáře", cat: "ucet" },
   invite_create: { label: "Pozvánka do třídy", cat: "sprava" },
+  invite_mail: { label: "Pozvánka odeslána e-mailem", cat: "sprava" },
+  mail_test: { label: "Zkušební e-mail", cat: "sprava" },
   timetable_save: { label: "Úprava rozvrhu", cat: "sprava" },
   admin_permissions: { label: "Oprávnění správce", cat: "sprava" },
   owner_transfer: { label: "Předání vlastnictví", cat: "sprava" },

@@ -88,7 +88,7 @@ const registerSchema = z.object({
   code: z.string().trim().min(10, "Pozvánka je neplatná.").max(200),
   email: z.string().trim().toLowerCase().pipe(z.email("Zadej platný e-mail.")),
   password: z.string().max(200, "Heslo je moc dlouhé."),
-  accept: z.literal("1", { error: "Potvrď, že souhlasíš s pravidly používání a že jsi četl(a) zásady ochrany osobních údajů." }),
+  accept: z.literal("1", { error: "Potvrď, že souhlasíš s pravidly používání, četl(a) jsi zásady ochrany osobních údajů a je ti aspoň 15 let (nebo máš souhlas zákonného zástupce)." }),
 });
 
 /** Registrace z pozvánky: člověk ze seznamu třídy si zvolí e-mail a heslo a převezme svého „neregistrovaného člena“ i s historií. */

@@ -5,10 +5,12 @@ export const metadata = { title: "Zásady ochrany osobních údajů" };
 // provozovatel a kontakt se čtou z .env až za běhu, stránka se proto nesmí předgenerovat při sestavení obrazu
 export const dynamic = "force-dynamic";
 
-const PRIVACY_UPDATED = "24. listopadu 2026";
+const PRIVACY_UPDATED = "25. listopadu 2026";
 
 export default function Privacy() {
   const op = operator();
+  // název poštovní služby (např. „Seznam.cz“), aby bylo jasné, komu se e-maily předávají
+  const mailProvider = process.env.SMTP_PROVIDER_NAME?.trim() || "";
   const mail = op.email ? <a href={`mailto:${op.email}`} className="link-u">{op.email}</a> : null;
   const who = op.name ? (op.url ? <a href={op.url} className="link-u">{op.name}</a> : op.name) : "provozovatel uvedený správcem třídy";
   return (
@@ -51,6 +53,16 @@ export default function Privacy() {
             <td>Plnění smlouvy (čl. 6 odst. 1 písm. b)</td>
           </tr>
           <tr>
+            <td><b>E-mail pro pozvánku</b>: adresa, na kterou správce pošle pozvánku do třídy</td>
+            <td>Doručení pozvánky. V Classmate se adresa neukládá, zůstane jen v poštovním serveru jako odeslaný e-mail.</td>
+            <td>Oprávněný zájem třídy pozvat své členy (čl. 6 odst. 1 písm. f)</td>
+          </tr>
+          <tr>
+            <td><b>Rozvrh a skupiny</b>: skupiny, do kterých chodíš, zvolený zdroj rozvrhu, vlastní rozvrh (když si ho postavíš)</td>
+            <td>Abys viděl(a) svůj rozvrh a zadání pro své skupiny</td>
+            <td>Plnění smlouvy (čl. 6 odst. 1 písm. b)</td>
+          </tr>
+          <tr>
             <td><b>Profil</b> (dobrovolný): profilová fotka, telefon, e-mail, sociální sítě</td>
             <td>Aby tě spolužáci našli</td>
             <td>Souhlas (čl. 6 odst. 1 písm. a), odvoláš ho smazáním údaje</td>
@@ -61,7 +73,7 @@ export default function Privacy() {
             <td>Oprávněný zájem správce (čl. 6 odst. 1 písm. f)</td>
           </tr>
           <tr>
-            <td><b>Volitelné funkce</b>, které si sám zapneš: třídní pokladna, rozpis služeb, sdílení poznámek, odběr kalendáře, oznámení, Todoist, osobní kalendář (ICS), funkce s umělou inteligencí</td>
+            <td><b>Volitelné funkce</b>, které si sám zapneš: třídní pokladna, rozpis služeb, sdílení poznámek, odběr kalendáře, oznámení a e-mailová upozornění (včetně připomínek „zítra test“ a „za týden končí úkol“), Todoist, osobní kalendář (ICS), funkce s umělou inteligencí</td>
             <td>Aby funkce fungovala</td>
             <td>Souhlas (čl. 6 odst. 1 písm. a), odvoláš ho vypnutím funkce nebo odpojením služby</td>
           </tr>
@@ -78,10 +90,10 @@ export default function Privacy() {
       <p>Mimo server se údaje dostanou jen tam, kde to provoz nebo funkce, kterou sám použiješ, nutně vyžaduje:</p>
       <ul>
         <li><b>Cloudflare, Inc.</b>: přes Cloudflare Tunnel prochází šifrované spojení mezi tvým zařízením a serverem (ochrana před útoky, bez otevřených portů). Cloudflare je zpracovatel; vidí technické údaje o spojení (IP adresa, adresa stránky).</li>
-        <li><b>Poskytovatel odesílání e-mailů</b> (poštovní server nastavený správcem): pozvánky, potvrzení e-mailu, obnova hesla a upozornění, které si zapneš.</li>
+        <li><b>Poskytovatel odesílání e-mailů</b> (poštovní služba nastavená provozovatelem{mailProvider ? <>: {mailProvider}</> : ""}): pozvánky, potvrzení e-mailu, obnova hesla a upozornění, které si zapneš. Vidí adresu příjemce a obsah e-mailu.</li>
         <li><b>Google Firebase Cloud Messaging</b>: doručení oznámení do Android aplikace (token zařízení a text oznámení).</li>
         <li><b>Služba Web Push tvého prohlížeče</b> (Google, Mozilla, Apple nebo Microsoft): doručení oznámení v prohlížeči.</li>
-        <li><b>Google (Gemini API)</b>: jen když použiješ funkci s umělou inteligencí; odešle se text, ze kterého má vzniknout odpověď (například poznámka). Do těchto funkcí nevkládej nic citlivého.</li>
+        <li><b>Google (Gemini API)</b>: jen když použiješ funkci s umělou inteligencí; odešle se text, ze kterého má vzniknout odpověď (například poznámka), nebo fotka či PDF rozvrhu, který má AI přečíst. Do těchto funkcí nevkládej nic citlivého.</li>
         <li><b>Stripe Payments Europe</b>: platba kartou do třídní pokladny, pokud ji třída používá. Stripe je pro platbu samostatným správcem; Classmate číslo karty nikdy nevidí ani neukládá.</li>
         <li><b>Todoist</b>: jen když propojíš svůj účet; posílají se do něj úkoly.</li>
         <li><b>Tvůj osobní kalendář (ICS)</b>: jen když v Nastavení vložíš jeho adresu; server ho pravidelně stahuje, aby ti ukázal změny rozvrhu. Adresa se ukládá šifrovaně a nikdo jiný ji nevidí.</li>
@@ -96,8 +108,8 @@ export default function Privacy() {
 
       <h2 id="kdo-vidi">4. Kdo co vidí</h2>
       <ul>
-        <li><b>Spolužáci ve třídě</b> vidí tvé jméno, profilovou fotku a kontakty, které vyplníš, úkoly, testy, události a příspěvky, které zadáš pro třídu (nebo skupinu), a poznámky, které sdílíš. Sdílení poznámek můžeš kdykoliv vypnout.</li>
-        <li><b>Jen ty</b> vidíš své nesdílené poznámky, nahrávky, nastavení, změny rozvrhu ze svého osobního kalendáře a vlastní widgety a pluginy.</li>
+        <li><b>Spolužáci ve třídě</b> vidí tvé jméno, profilovou fotku a kontakty, které vyplníš, skupiny, do kterých chodíš (kvůli společným skupinám), úkoly, testy, události a příspěvky, které zadáš pro třídu (nebo skupinu), a poznámky, které sdílíš. Sdílení poznámek můžeš kdykoliv vypnout.</li>
+        <li><b>Jen ty</b> vidíš své nesdílené poznámky, nahrávky, nastavení, vlastní rozvrh, změny rozvrhu ze svého osobního kalendáře a vlastní widgety a pluginy.</li>
         <li><b>Správci třídy</b> vidí seznam členů, stav pozvánek a technický stav serveru a v pokladně vidí, kdo co zaplatil. Obsah tvých nesdílených poznámek v aplikaci nevidí.</li>
         <li><b>Provozovatel serveru</b> (správce osobních údajů) má z podstaty věci technický přístup k databázi. Využije ho jen k provozu, zálohám a řešení problémů.</li>
       </ul>
@@ -122,7 +134,8 @@ export default function Privacy() {
       <h2 id="uchovani">7. Jak dlouho údaje držíme</h2>
       <ul>
         <li>Účet a tvůj obsah, dokud účet nesmažeš, nejdéle do konce provozu aplikace pro třídu (typicky do konce studia). Před ukončením provozu dostaneš možnost stáhnout si data.</li>
-        <li>Nepoužitá pozvánka 14 dní.</li>
+        <li>Nepoužitá pozvánka 14 dní. E-mail, na který byla pozvánka poslána, Classmate neukládá.</li>
+        <li>Zprávy a upozornění v aplikaci 60 dní.</li>
         <li>Přihlášení 30 dní od posledního použití.</li>
         <li>Smazané poznámky 30 dní v koši, pak se smažou natrvalo.</li>
         <li>Záznamy IP adres kvůli omezení pokusů o přihlášení jen po dobu omezení (minuty až hodina).</li>

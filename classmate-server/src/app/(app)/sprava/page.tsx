@@ -11,7 +11,7 @@ import { removeUserAvatar } from "@/app/actions/avatar";
 import { Avatar } from "@/components/Avatar";
 import { avatarVersion } from "@/lib/avatar";
 import {
-  cancelAnnouncementAction, clearUserSocials, createInviteAction, renameClassAndSchool, renameUser, resetUserTotp, setPermissionsAction, setRoster,
+  cancelAnnouncementAction, clearUserSocials, createInviteAction, sendInviteMailAction, sendTestMailAction, renameClassAndSchool, renameUser, resetUserTotp, setPermissionsAction, setRoster,
   setUserPassword, signOutUser, toggleAdmin, transferOwnerAction,
 } from "@/app/actions/admin";
 import { LiveSearch } from "@/components/LiveSearch";
@@ -88,6 +88,23 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       </div>
 
       {owner && <ServerStatus />}
+      {owner && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 className="group-title">E-maily</h2>
+          <div className="card card-pad">
+            {mailConfigured() ? (
+              <ActionForm action={sendTestMailAction}>
+                <div className="btn-row" style={{ flexWrap: "wrap" }}>
+                  <span>Odesílání e-mailů je zapnuté. Ověř ho zkušebním e-mailem na {me.email}.</span>
+                  <Submit>Poslat zkušební e-mail</Submit>
+                </div>
+              </ActionForm>
+            ) : (
+              <p style={{ margin: 0 }}>E-maily jsou vypnuté: bez nich nejde obnovit zapomenuté heslo, poslat pozvánku e-mailem ani dostávat upozornění. Nastav <code>SMTP_HOST</code>, <code>SMTP_FROM</code> (a obvykle <code>SMTP_USER</code>, <code>SMTP_PASS</code>) v nastavení serveru a restartuj ho. Postup je v DEPLOY.md.</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {(() => {
         const tt = permanentTimetable();
@@ -187,6 +204,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <div className="card card-pad" style={{ marginBottom: 16 }}>
             <p style={{ margin: "0 0 10px" }}><b>Pozvánka{invitedName ? ` pro ${invitedName}` : ""}</b> je připravená. Pošli odkaz jen tomu člověku (platí {INVITE_DAYS} dní a jde použít jednou):</p>
             <CopyField value={inviteLink} />
+            {mailConfigured() && (
+              <ActionForm action={sendInviteMailAction}>
+                <div className="btn-row" style={{ marginTop: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+                  <input type="hidden" name="code" value={sp.pozvanka} />
+                  <label className="field" style={{ margin: 0, flex: "1 1 220px" }}><span>Nebo pošli e-mailem</span><input className="input" type="email" name="email" placeholder="jmeno@example.cz" autoComplete="off" required /></label>
+                  <Submit>Poslat pozvánku</Submit>
+                </div>
+              </ActionForm>
+            )}
           </div>
         )}
         <div style={{ marginBottom: 14 }}><LiveSearch initial={q} placeholder="Hledat (jméno, e-mail)…" label="Hledat členy" /></div>

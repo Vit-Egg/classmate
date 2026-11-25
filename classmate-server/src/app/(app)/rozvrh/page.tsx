@@ -2,7 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { PersistedSeg } from "@/components/PersistedSeg";
 import { TimetableView, shareModel, type LessonItems } from "@/components/Timetable";
-import { TimetableWidgetSwap } from "@/components/TimetableWidget";
+import { EmbedFrame } from "@/components/EmbedFrame";
+import { timetableReplacement } from "@/lib/timetable-replace";
 import { ownTimetable } from "@/lib/own-timetable";
 import { hasCalendarEvents } from "@/lib/personal-calendar";
 import { can } from "@/lib/permissions";
@@ -40,6 +41,20 @@ export default async function TimetablePage({ searchParams }: { searchParams: Pr
   const even = (monday: string) => isoWeek(monday) % 2 === 0;
   // má třída hodiny jen v sudém nebo lichém týdnu? pak se mezi nimi přepíná, jinak je jen jeden rozvrh
   const source = timetableSource(user);
+  // zdroj „plugin nebo widget místo rozvrhu“: stránka pluginu nahradí celou stránku Rozvrh
+  const replace = source === "widget" ? timetableReplacement(user) : null;
+  if (replace?.kind === "page") {
+    return (
+      <div className="wide">
+        {!replace.plugin && (
+          <div className="page-head">
+            <div><h1 className="title">{replace.title}</h1><p className="subtitle">Místo rozvrhu · <Link href="/nastaveni?k=skola#zdroj" className="link-u">změnit zdroj</Link></p></div>
+          </div>
+        )}
+        <EmbedFrame key={replace.url} title={replace.title} url={replace.url} fill plugin={replace.plugin} />
+      </div>
+    );
+  }
   const base = (await getTimetable(user, "permanent")).data;
   const hasCycles = source !== "cal" && !!base?.lessons.some((l) => l.cycles.length);
   const sourceLabel = source === "own" && ownTimetable(user.id) ? "Vlastní rozvrh" : source === "cal" && hasCalendarEvents(user.id) ? "Z mého kalendáře" : "Stálý rozvrh";
@@ -109,7 +124,7 @@ export default async function TimetablePage({ searchParams }: { searchParams: Pr
       {result.data && !result.data.lessons.length && !base?.lessons.length ? (
         <div className="empty">Rozvrh zatím není zadaný.{can(user, "rozvrh") ? <> <Link href="/sprava/rozvrh" className="link-u">Zadat rozvrh třídy</Link></> : " Až ho správce zadá, objeví se tady."} Můžeš si také <Link href="/rozvrh/vlastni" className="link-u">postavit vlastní</Link>.</div>
       ) : result.data && (
-        source === "widget" ? <TimetableWidgetSwap>{grid_el}</TimetableWidgetSwap> : grid_el
+        replace ? <EmbedFrame key={replace.url} title={replace.title} url={replace.url} height={Math.max(520, replace.height)} plugin={replace.plugin} /> : grid_el
       )}
     </div>
   );

@@ -296,7 +296,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               { v: "class", label: "Stálý rozvrh třídy", hint: "Rozvrh od správce podle tvých skupin. Změny z tvého kalendáře se ukážou jako štítky Odpadá, Suplování nebo Jiná učebna.", ok: true },
               { v: "own", label: "Vlastní rozvrh", hint: hasOwn ? "Rozvrh, který sis postavil(a) sám/sama." : "Postav si vlastní rozvrh v editoru, třeba když máš jinou kombinaci seminářů.", ok: hasOwn },
               { v: "cal", label: "Můj kalendář", hint: hasCal ? "Hodiny se poskládají přímo z událostí tvého kalendáře, do kterého si rozvrh synchronizuješ (třeba Google kalendář). Předměty se poznají podle názvu." : "Nejdřív níže propoj svůj kalendář.", ok: hasCal },
-              { v: "widget", label: "Widget místo rozvrhu", hint: "Na stránce Rozvrh a na Dnes se místo mřížky ukáže tvůj widget. Odpočet do zvonění, testy u hodin a widgety v telefonu dál běží podle rozvrhu třídy.", ok: true },
+              { v: "widget", label: "Plugin nebo widget místo rozvrhu", hint: "Stránka pluginu (třeba Rozvrh z Bakalářů z Classmate lite) nahradí celou stránku Rozvrh, widget jen mřížku. Na Dnes se ukáže widget rozvrhu z pluginu. Odpočet do zvonění, testy u hodin a widgety v telefonu dál běží podle rozvrhu třídy.", ok: true },
             ];
             return (
               <div className="card card-pad">
@@ -314,7 +314,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     <Link href="/rozvrh/vlastni" className="btn">{hasOwn ? "Upravit vlastní rozvrh" : "Postavit vlastní rozvrh"}</Link>
                   </div>
                 </ActionForm>
-                {src === "widget" && <TimetableWidgetPicker />}
+                {src === "widget" && <TimetableWidgetPicker current={getPref(user, "tt_replace") ?? ""} />}
               </div>
             );
           })()}

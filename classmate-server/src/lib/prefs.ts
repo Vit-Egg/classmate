@@ -21,6 +21,8 @@ export const PREFS = {
   my_groups: /^[A-Za-z0-9_,-]{0,600}$/,
   /** odkud se bere rozvrh: stálý rozvrh třídy, vlastní rozvrh, osobní kalendář (ICS), nebo widget místo mřížky */
   tt_source: /^(class|own|cal|widget)$/,
+  /** co nahrazuje rozvrh při zdroji „widget“: stránka pluginu (page:<plugin>:<stránka>) nebo widget (widget:<id>) */
+  tt_replace: /^(page:[A-Za-z0-9_-]{1,40}:[A-Za-z0-9_-]{1,40}|widget:[A-Za-z0-9_-]{1,40})$/,
 } as const;
 export type PrefKey = keyof typeof PREFS;
 

@@ -19,7 +19,8 @@ import { nextSchoolDay } from "@/lib/nextday";
 import { isSelfStudy } from "@/lib/selfstudy";
 import { requireUser } from "@/lib/session";
 import { chosenGroups, getTimetable, permanentTimetable, timetableSource } from "@/lib/sync";
-import { TimetableWidgetSwap } from "@/components/TimetableWidget";
+import { EmbedFrame } from "@/components/EmbedFrame";
+import { timetableReplacement } from "@/lib/timetable-replace";
 import { createNote } from "@/app/actions/notes";
 import { openMessage } from "@/app/actions/messages";
 import { all } from "@/lib/db";
@@ -408,7 +409,16 @@ export default async function TodayPage() {
     </div>
   )) : null;
 
-  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: timetableSource(user) === "widget" ? <section><div className="section-head"><h2 className="section">Rozvrh</h2><Link href="/rozvrh" className="link-all">Vše →</Link></div><TimetableWidgetSwap height={360}>{afterSchool && tomorrowEl ? tomorrowEl : scheduleEl}</TimetableWidgetSwap></section> : afterSchool && tomorrowEl ? tomorrowEl : scheduleEl, d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, c: calEl, p: notesEl, u: messagesEl, m: cashEl, b: quickEl, n: boardEl, e: daysOffEl };
+  // zdroj „plugin nebo widget místo rozvrhu“: na Dnes widget (u stránky pluginu jeho widget s rozvrhem, je-li)
+  const repl = timetableSource(user) === "widget" ? timetableReplacement(user) : null;
+  const replUrl = repl ? (repl.kind === "widget" ? repl.url : repl.todayUrl) : undefined;
+  const ttReplaceEl = repl && replUrl ? (
+    <section>
+      <div className="section-head"><h2 className="section">Rozvrh</h2><Link href="/rozvrh" className="link-all">Celý rozvrh →</Link></div>
+      <EmbedFrame key={replUrl} title={repl.title} url={replUrl} height={Math.max(360, (repl.kind === "widget" ? repl.height : repl.todayHeight) ?? 360)} plugin={repl.plugin} />
+    </section>
+  ) : null;
+  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: ttReplaceEl ?? (afterSchool && tomorrowEl ? tomorrowEl : scheduleEl), d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, c: calEl, p: notesEl, u: messagesEl, m: cashEl, b: quickEl, n: boardEl, e: daysOffEl };
   const available = ["r", "s", ...(user.duty_enabled ? ["d"] : []), "t", "k", "y", "c", "p", "u", ...(user.cash_enabled ? ["m"] : []), "b", "x"];
   const col = (c: "l" | "r") => layout.filter((x) => x.col === c && widgets[x.id]).map((x) => <Fragment key={x.id}>{widgets[x.id]}</Fragment>);
   const showRuler = layout.find((x) => x.id === "r")?.col !== "h";

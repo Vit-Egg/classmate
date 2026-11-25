@@ -1,80 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { EmbedFrame } from "./EmbedFrame";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { savePref } from "@/app/actions/settings";
 import { loadPlugins, onPluginsChange, type PluginState } from "@/lib/plugins-client";
 
-/** Který osobní widget nahrazuje rozvrh. Volba se ukládá jen v tomhle prohlížeči (widgety samotné jsou u účtu). */
-const KEY = "classmate.ttwidget.v1";
-
-const readChoice = () => {
-  try {
-    return localStorage.getItem(KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
-const writeChoice = (id: string) => {
-  try {
-    if (id) localStorage.setItem(KEY, id);
-    else localStorage.removeItem(KEY);
-    window.dispatchEvent(new Event("classmate:ttwidget"));
-  } catch {}
-};
-
-function useWidgets() {
+/**
+ * Nastavení → Zdroj rozvrhu → „Plugin nebo widget místo rozvrhu“: výběr stránky pluginu (nahradí celou stránku Rozvrh)
+ * nebo widgetu (nahradí mřížku). Volba se ukládá u účtu, stejně jako pluginy.
+ */
+export function TimetableWidgetPicker({ current }: { current: string }) {
   const [s, setS] = useState<PluginState | null>(null);
-  const [choice, setChoice] = useState("");
+  const [value, setValue] = useState(current);
+  const [saved, setSaved] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
   useEffect(() => {
-    const read = () => {
-      setS(loadPlugins());
-      setChoice(readChoice());
-    };
+    const read = () => setS(loadPlugins());
     read();
-    window.addEventListener("classmate:ttwidget", read);
-    const off = onPluginsChange(read);
-    return () => {
-      window.removeEventListener("classmate:ttwidget", read);
-      off();
-    };
+    return onPluginsChange(read);
   }, []);
-  return { s, choice };
-}
-
-/** Nastavení: výběr widgetu, který se ukáže místo mřížky rozvrhu. */
-export function TimetableWidgetPicker() {
-  const { s, choice } = useWidgets();
   if (!s) return null;
-  if (!s.widgets.length) {
-    return <p className="hint" style={{ margin: "8px 0 0" }}>Zatím nemáš žádný widget. <Link href="/nastaveni?k=pluginy" className="link-u">Přidej vloženou stránku nebo plugin</Link> a pak ho tu vyber.</p>;
+  const pages = s.plugins.flatMap((p) => p.pages.map((pg) => ({ value: `page:${p.id}:${pg.id}`, label: `${p.name}: ${pg.title}` })));
+  const widgets = s.widgets.map((w) => ({ value: `widget:${w.id}`, label: w.title }));
+  if (!pages.length && !widgets.length) {
+    return <p className="hint" style={{ margin: "10px 0 0" }}>Zatím nemáš žádný plugin ani widget. <Link href="/nastaveni?k=pluginy" className="link-u">Přidej plugin nebo web</Link> a pak ho tu vyber.</p>;
   }
+  const choose = (v: string) => {
+    setValue(v);
+    setSaved(false);
+    if (!v) return;
+    start(async () => {
+      await savePref("tt_replace", v);
+      setSaved(true);
+      router.refresh();
+    });
+  };
   return (
     <label className="field" style={{ marginTop: 10 }}>
-      <span>Widget místo rozvrhu (jen v tomhle prohlížeči)</span>
-      <select className="select" value={choice} onChange={(e) => writeChoice(e.target.value)}>
-        <option value="">Vyber widget…</option>
-        {s.widgets.map((w) => <option key={w.id} value={w.id}>{w.title}</option>)}
+      <span>Co se ukáže místo rozvrhu</span>
+      <select className="select" value={value} onChange={(e) => choose(e.target.value)} disabled={pending}>
+        <option value="">Vyber…</option>
+        {pages.length > 0 && <optgroup label="Stránka pluginu (nahradí celou stránku Rozvrh)">{pages.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>}
+        {widgets.length > 0 && <optgroup label="Widget (nahradí jen mřížku)">{widgets.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>}
       </select>
+      {saved && <small className="hint" role="status">Uloženo. Projeví se na stránkách Rozvrh a Dnes.</small>}
     </label>
   );
-}
-
-/**
- * Rozvrh / Dnes: když má uživatel zdroj „widget“ a v tomhle prohlížeči vybraný widget, ukáže ho místo mřížky.
- * Jinak (jiný prohlížeč, widget smazaný) zůstane rozvrh třídy, který přijde jako children.
- */
-export function TimetableWidgetSwap({ children, height = 520 }: { children: React.ReactNode; height?: number }) {
-  const { s, choice } = useWidgets();
-  const w = s?.widgets.find((x) => x.id === choice);
-  if (!s) return <>{children}</>;
-  if (!w) {
-    return (
-      <>
-        <p className="hint" style={{ margin: "0 4px 10px" }}>Máš zvolený widget místo rozvrhu, ale v tomhle prohlížeči žádný vybraný není. <Link href="/nastaveni?k=skola#zdroj" className="link-u">Vybrat widget</Link></p>
-        {children}
-      </>
-    );
-  }
-  return <EmbedFrame title={w.title} url={w.url} height={Math.max(height, w.height)} />;
 }

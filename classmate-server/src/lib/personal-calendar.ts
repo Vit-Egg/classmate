@@ -223,6 +223,47 @@ export function withPersonalChanges(userId: number, tt: Timetable): Timetable {
   return applyEvents(tt, events);
 }
 
+/** Má uživatel připojený kalendář s nějakými událostmi (podmínka pro zdroj rozvrhu „Můj kalendář“). */
+export const hasCalendarEvents = (userId: number) => !!cachedEvents(userId)?.length;
+
+/**
+ * Zdroj rozvrhu „Můj kalendář“: týden se poskládá přímo z událostí osobního kalendáře.
+ * `base` je týden rozvrhu třídy s daty u dnů (dává zvonění, předměty a popisy volných dnů).
+ * Událost se zařadí do hodiny, která začíná do 10 minut od ní; předmět se pozná podle názvu nebo zkratky (jinak zůstane šedá).
+ * Celodenní události a události mimo zvonění se přeskočí. Bez kalendáře vrací null.
+ */
+export function calendarWeek(userId: number, base: Timetable): Timetable | null {
+  const events = cachedEvents(userId);
+  if (!events?.length) return null;
+  const hours = [...base.hours].sort((a, b) => toMin(a.begin) - toMin(b.begin));
+  const subjects = base.subjects ?? [];
+  const match = (summary: string) => {
+    const f = fold(summary);
+    return (
+      subjects.find((s) => fold(s.name) === f || fold(s.abbrev) === f) ??
+      subjects.find((s) => f.includes(fold(s.name)) || (s.abbrev.length >= 2 && new RegExp(`(^|[^a-z0-9])${fold(s.abbrev).replace(/[^a-z0-9]/g, "")}([^a-z0-9]|$)`).test(f)))
+    );
+  };
+  const lessons: Lesson[] = [];
+  for (const d of base.days) {
+    if (!d.date) continue;
+    for (const ev of events) {
+      if (ev.date !== d.date || !ev.start) continue;
+      const h = hours.find((x) => Math.abs(toMin(x.begin) - toMin(ev.start!)) <= 10);
+      if (!h) continue;
+      const s = match(ev.summary);
+      const text = [ev.summary, ev.description].filter(Boolean).join(" · ").slice(0, 200);
+      const cancelled = ev.cancelled || CANCEL.test(ev.summary) || CANCEL.test(ev.description);
+      const subst = SUBST.test(ev.summary) || SUBST.test(ev.description);
+      lessons.push({
+        day: d.day, hour: h.hour, subject: s?.name ?? (ev.summary || "Hodina"), subjectId: s?.id ?? "", room: ev.location, teacher: "", groups: [], cycles: [],
+        change: cancelled ? { kind: "cancelled", label: "Odpadá", text } : subst ? { kind: "substitution", label: "Suplování", text } : undefined,
+      });
+    }
+  }
+  return { ...base, lessons: lessons.sort((a, b) => a.day - b.day || a.hour - b.hour) };
+}
+
 export function applyEvents(tt: Timetable, events: CalEvent[]): Timetable {
   const hours = [...tt.hours].sort((a, b) => toMin(a.begin) - toMin(b.begin));
   const byDate = new Map<string, CalEvent[]>();

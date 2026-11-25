@@ -55,6 +55,15 @@ export async function subjectsOverview(user: User): Promise<{ items: SubjectSumm
   return { items, stale: !perm.data };
 }
 
+/** Zápisky z hodin: moje a sdílené poznámky třídy k předmětu, nejnovější nahoře (datum = poslední úprava). */
+function lessonNotes(user: User, subjectId: number) {
+  const day = (ms: number) => new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Prague" });
+  const own = all<{ id: number; title: string; updated_at: number }>("SELECT id, title, updated_at FROM notes WHERE user_id = ? AND subject_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 20", user.id, subjectId)
+    .map((n) => ({ id: n.id, title: n.title, at: n.updated_at, author: "" }));
+  const shared = sharedNotes(user).filter((n) => n.subject_id === subjectId).map((n) => ({ id: n.id, title: n.title, at: n.updated_at, author: n.author }));
+  return [...own, ...shared].sort((a, b) => b.at - a.at).slice(0, 20).map((n) => ({ ...n, date: day(n.at) }));
+}
+
 export type SubjectDetail = Awaited<ReturnType<typeof subjectDetail>>;
 
 export async function subjectDetail(user: User, id: number) {
@@ -82,8 +91,6 @@ export async function subjectDetail(user: User, id: number) {
   themes.sort((a, b) => b.date.localeCompare(a.date) || b.hour - a.hour);
   upcoming.sort((a, b) => a.date.localeCompare(b.date) || a.hour - b.hour);
 
-  const markList: Mark[] = [];
-
   return {
     subject,
     teachers: uniq(slots.map((s) => s.teacher)),
@@ -91,16 +98,9 @@ export async function subjectDetail(user: User, id: number) {
     selfStudyHours: slots.filter((s) => isSelfStudy(s.room)).length,
     slots: slots.map((s) => ({ ...s, begin: hours.get(s.hour)?.begin, end: hours.get(s.hour)?.end })),
     nextLessons: upcoming.slice(0, 3),
-    themes: themes.slice(0, 8),
-    themesAll: themes.slice(0, 30),
     tests: listTests(user.id, user.class_id, today).filter((t) => t.subject_name === subject.name),
     tasks: listTasks(user.id, user.class_id, false).filter((t) => t.subject_name === subject.name),
-    marks: markList,
-    average: null as number | null,
-    averageText: undefined as string | undefined,
-    absence: undefined as { name: string; lessons: number; missed: number; late: number; soon: number; school: number } | undefined,
-    ownNotes: all<{ id: number; title: string; updated_at: number }>("SELECT id, title, updated_at FROM notes WHERE user_id = ? AND subject_id = ? AND deleted_at IS NULL ORDER BY pinned DESC, updated_at DESC LIMIT 20", user.id, subject.id),
-    sharedNotes: sharedNotes(user).filter((n) => n.subject_id === subject.id).map((n) => ({ id: n.id, title: n.title, author: n.author })),
+    lessonNotes: lessonNotes(user, subject.id),
     stale: !perm.data,
   };
 }

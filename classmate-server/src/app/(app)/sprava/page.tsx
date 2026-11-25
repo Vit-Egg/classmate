@@ -18,7 +18,7 @@ import { LiveSearch } from "@/components/LiveSearch";
 import { PopoverMenu } from "@/components/PopoverMenu";
 import { ActionForm, ConfirmButton, Submit } from "@/components/forms";
 import { all, get } from "@/lib/db";
-import { fmtDate, fmtDateTime, plural } from "@/lib/dates";
+import { fmtDate, fmtDateTime, fmtShort, plural } from "@/lib/dates";
 import { parseRoster } from "@/lib/roster";
 import { instanceStatus, operator } from "@/lib/instance";
 import { requireAdmin } from "@/lib/session";
@@ -28,6 +28,8 @@ import { listAnnouncements } from "@/lib/announce";
 import { mailConfigured } from "@/lib/mail";
 import { STARTED, versionTitle } from "@/lib/version";
 import { PERMISSIONS, can, parsePermissions } from "@/lib/permissions";
+import { permanentTimetable } from "@/lib/sync";
+import { listSchoolDays, schoolYear } from "@/lib/school-days";
 
 export const metadata = { title: "Správa" };
 export const dynamic = "force-dynamic";
@@ -86,6 +88,32 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       </div>
 
       {owner && <ServerStatus />}
+
+      {(() => {
+        const tt = permanentTimetable();
+        const placeholders = users.filter((u) => u.placeholder).length;
+        const steps = [
+          { done: tt.lessons.length > 0, label: "Zadat stálý rozvrh", hint: tt.lessons.length ? `${tt.lessons.length} hodin, ${tt.subjects.length} předmětů` : "zvonění, předměty a hodiny", href: "/sprava/rozvrh", perm: "rozvrh" as const },
+          { done: tt.groups.length > 0, label: "Rozdělit třídu do skupin", hint: tt.groups.length ? `${tt.groups.length} skupin` : "jazyky, cvičení, semináře (když se třída dělí)", href: "/sprava/rozvrh", perm: "rozvrh" as const },
+          { done: !!schoolYear() || listSchoolDays().length > 0, label: "Zadat školní rok a prázdniny", hint: schoolYear() ? `školní rok do ${fmtShort(schoolYear()!.to)}` : "státní svátky se doplní samy", href: "/sprava/rozvrh", perm: "rozvrh" as const },
+          { done: rosterCount > 0, label: "Vyplnit seznam třídy", hint: rosterCount ? `${rosterCount} jmen` : "jména spolužáků, ať jde posílat pozvánky", href: "#clenove", perm: "clenove" as const },
+          { done: cls.registered > 1 || (rosterCount > 0 && placeholders === 0), label: "Rozeslat pozvánky", hint: `${cls.registered} ${plural(cls.registered, "registrovaný", "registrovaní", "registrovaných")}${placeholders ? `, ${placeholders} bez účtu` : ""}`, href: "#clenove", perm: "clenove" as const },
+        ].filter((x) => can(me, x.perm));
+        const left = steps.filter((x) => !x.done).length;
+        return steps.length > 0 && left > 0 ? (
+          <section style={{ marginBottom: 28 }}>
+            <h2 className="group-title">Co zbývá nastavit · {steps.length - left} z {steps.length}</h2>
+            <div className="card rows">
+              {steps.map((x) => (
+                <Link key={x.label} href={x.href} className="kv" style={{ textDecoration: "none", color: "inherit" }}>
+                  <div><strong>{x.done ? "✓ " : "○ "}{x.label}</strong><small>{x.hint}</small></div>
+                  <span className={`badge${x.done ? " accent" : ""}`}>{x.done ? "hotovo" : "nastavit"}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null;
+      })()}
 
       {announcements.length > 0 && (
         <section style={{ marginBottom: 28 }}>

@@ -1230,4 +1230,35 @@ CREATE TABLE IF NOT EXISTS user_calendars (
 );
 `,
   },
+  {
+    id: 78,
+    sql: `
+-- Prázdniny, volna a ruční změny pro celou třídu (Správa → Rozvrh třídy).
+CREATE TABLE IF NOT EXISTS school_days (
+  id INTEGER PRIMARY KEY,
+  date_from TEXT NOT NULL,
+  date_to TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  hour_from INTEGER,
+  hour_to INTEGER,
+  room TEXT NOT NULL DEFAULT '',
+  groups TEXT NOT NULL DEFAULT '',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS school_days_range ON school_days (date_from, date_to);
+`,
+  },
+  {
+    id: 79,
+    sql: `
+-- Vlastní stálý rozvrh žáka (Rozvrh → Vlastní rozvrh). Vidí ho jen jeho autor; tvar je stejný jako u rozvrhu třídy.
+CREATE TABLE IF NOT EXISTS user_timetables (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  data TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+`,
+  },
 ];

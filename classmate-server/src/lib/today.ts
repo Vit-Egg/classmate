@@ -12,6 +12,8 @@ export const WIDGETS = [
   { id: "m", label: "Pokladna", col: "h" },
   { id: "b", label: "Rychlé akce", col: "h" },
   { id: "x", label: "Denní horoskop", col: "h" },
+  { id: "n", label: "Nejnovější z nástěnky", col: "r" },
+  { id: "e", label: "Nejbližší volno a změny třídy", col: "r" },
 ] as const;
 
 export type Col = "l" | "r" | "h";
@@ -35,6 +37,8 @@ const DEFAULT: LayoutItem[] = [
   { id: "m", col: "h" },
   { id: "b", col: "h" },
   { id: "x", col: "h" },
+  { id: "n", col: "r" },
+  { id: "e", col: "r" },
 ];
 
 /** Přečte uloženou volbu. Neznámé nebo chybějící panely se doplní výchozími, takže nový panel se po aktualizaci nikdy neztratí. */

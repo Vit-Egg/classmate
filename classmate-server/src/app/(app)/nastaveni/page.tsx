@@ -11,7 +11,10 @@ import { VersionInfo } from "@/components/VersionInfo";
 import { SummarySetting } from "@/components/SummarySetting";
 import { getPref } from "@/lib/prefs";
 import { summaryEnabled } from "@/lib/summary";
-import { saveMyGroups, setTimetableSharing } from "@/app/actions/settings";
+import { saveMyGroups, saveTimetableSourceAction } from "@/app/actions/settings";
+import { TimetableWidgetPicker } from "@/components/TimetableWidget";
+import { ownTimetable } from "@/lib/own-timetable";
+import { timetableSource } from "@/lib/sync";
 import { setCategory } from "@/app/actions/messages";
 import { PushToggle } from "@/components/PushToggle";
 import { CATEGORIES, disabledCategories } from "@/lib/messages";
@@ -66,7 +69,7 @@ const PasswordForm = ({ action, submit }: { action: Parameters<typeof ActionForm
 const GROUPS = [
   { id: "obecne", label: "Vzhled a chování", sub: "Motiv, rozložení, zkratky", color: "#5b8def", icon: "M12 3a9 9 0 1 0 0 18 3 3 0 0 0 2-5 2 2 0 0 1 2-2h2a2 2 0 0 0 2-2 9 9 0 0 0-8-9zM7.5 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm4 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" },
   { id: "oznameni", label: "Oznámení", sub: "Co a jak ti má chodit", color: "#ef5b5b", icon: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zM13.7 21a2 2 0 0 1-3.4 0" },
-  { id: "skola", label: "Škola a předměty", sub: "Předměty, skupiny a sdílení rozvrhu", color: "#34b27b", icon: "M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5" },
+  { id: "skola", label: "Škola a předměty", sub: "Skupiny, zdroj rozvrhu a kalendář", color: "#34b27b", icon: "M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5" },
   { id: "propojeni", label: "Propojení", sub: "Todoist, AI aplikace", color: "#f0a030", icon: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" },
   { id: "pluginy", label: "Pluginy a widgety", sub: "Vlastní widgety na Dnes, obchod s pluginy", color: "#2bb3a3", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM17 13v7M13.5 16.5h7" },
   { id: "ucet", label: "Účet a zabezpečení", sub: "Heslo, ověření, export dat", color: "#8b6cf0", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
@@ -95,7 +98,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   }
   const todoist = todoistAccount(user.id);
   const cal = calendarStatus(user.id);
-  const ttGroups = permanentTimetable().groups;
+  // skupiny seskupené podle předmětů, které se v nich učí: SK1 a SK2 mají stejné předměty, takže se z nich vybírá jedna
+  const groupSets = (() => {
+    const tt = permanentTimetable();
+    const subjOf = new Map<string, Set<string>>();
+    for (const l of tt.lessons) for (const g of l.groups) subjOf.set(g, (subjOf.get(g) ?? new Set()).add(l.subject));
+    const sets = new Map<string, { key: string; subjects: string; groups: typeof tt.groups }>();
+    for (const g of tt.groups) {
+      const subjects = [...(subjOf.get(g.id) ?? [])].sort().join(", ") || "Ostatní";
+      const cur = sets.get(subjects) ?? { key: subjects, subjects, groups: [] };
+      cur.groups.push(g);
+      sets.set(subjects, cur);
+    }
+    return [...sets.values()];
+  })();
   const myGroups = chosenGroups(user);
   const season = activeSeason();
   const sp = await searchParams;
@@ -235,21 +251,73 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
 
         <section>
-          <h2 className="section">Moje skupiny</h2>
-          <p className="hint" style={{ margin: "4px 0 12px" }}>Zaškrtni skupiny, do kterých chodíš (třeba angličtina 1). Rozvrh, předměty a zadání u dělených předmětů se ti pak ukazují jen pro ně. Když nezaškrtneš nic, vidíš hodiny všech skupin.</p>
-          {ttGroups.length ? (
+          <h2 className="section" id="skupiny">Moje skupiny</h2>
+          <p className="hint" style={{ margin: "4px 0 12px" }}>Vyber, do kterých skupin chodíš. Rozvrh, předměty a zadání u dělených předmětů se ti pak ukazují jen pro ně. Dokud nic nevybereš, vidíš hodiny všech skupin.</p>
+          {groupSets.length ? (
             <ActionForm action={saveMyGroups} resetOnSuccess={false}>
-              <div className="card card-pad">
-                {ttGroups.map((g) => (
-                  <label key={g.id} className="check-row">
-                    <input type="checkbox" name="group" value={g.id} defaultChecked={myGroups?.has(g.id) ?? false} />
-                    <span><b>{g.abbrev}</b>{g.name && g.name !== g.abbrev ? ` · ${g.name}` : ""}</span>
-                  </label>
+              <div className="card card-pad stack">
+                {groupSets.map((set, i) => (
+                  <fieldset key={set.key} className="fieldset" style={{ margin: 0 }}>
+                    <legend>{set.subjects}</legend>
+                    {set.groups.length > 1 ? (
+                      <>
+                        {set.groups.map((g) => (
+                          <label key={g.id} className="check-row">
+                            <input type="radio" name={`group_${i}`} value={g.id} defaultChecked={myGroups?.has(g.id) ?? false} />
+                            <span><b>{g.abbrev}</b>{g.name && g.name !== g.abbrev ? ` · ${g.name}` : ""}</span>
+                          </label>
+                        ))}
+                        <label className="check-row">
+                          <input type="radio" name={`group_${i}`} value="" defaultChecked={!set.groups.some((g) => myGroups?.has(g.id))} />
+                          <span>nechodím / nevím</span>
+                        </label>
+                      </>
+                    ) : (
+                      <label className="check-row">
+                        <input type="checkbox" name={`group_${i}`} value={set.groups[0].id} defaultChecked={myGroups?.has(set.groups[0].id) ?? false} />
+                        <span><b>{set.groups[0].abbrev}</b>{set.groups[0].name && set.groups[0].name !== set.groups[0].abbrev ? ` · ${set.groups[0].name}` : ""}</span>
+                      </label>
+                    )}
+                  </fieldset>
                 ))}
               </div>
               <div style={{ marginTop: 12 }}><Submit>Uložit skupiny</Submit></div>
             </ActionForm>
           ) : <div className="empty">Třída se na žádné předměty nedělí.</div>}
+        </section>
+
+        <section id="zdroj">
+          <h2 className="section" style={{ marginBottom: 12 }}>Zdroj rozvrhu</h2>
+          {(() => {
+            const src = timetableSource(user);
+            const hasOwn = !!ownTimetable(user.id);
+            const hasCal = !!cal?.events;
+            const opts = [
+              { v: "class", label: "Stálý rozvrh třídy", hint: "Rozvrh od správce podle tvých skupin. Změny z tvého kalendáře se ukážou jako štítky Odpadá, Suplování nebo Jiná učebna.", ok: true },
+              { v: "own", label: "Vlastní rozvrh", hint: hasOwn ? "Rozvrh, který sis postavil(a) sám/sama." : "Postav si vlastní rozvrh v editoru, třeba když máš jinou kombinaci seminářů.", ok: hasOwn },
+              { v: "cal", label: "Můj kalendář", hint: hasCal ? "Hodiny se poskládají přímo z událostí tvého kalendáře, do kterého si rozvrh synchronizuješ (třeba Google kalendář). Předměty se poznají podle názvu." : "Nejdřív níže propoj svůj kalendář.", ok: hasCal },
+              { v: "widget", label: "Widget místo rozvrhu", hint: "Na stránce Rozvrh a na Dnes se místo mřížky ukáže tvůj widget. Odpočet do zvonění, testy u hodin a widgety v telefonu dál běží podle rozvrhu třídy.", ok: true },
+            ];
+            return (
+              <div className="card card-pad">
+                <ActionForm action={saveTimetableSourceAction} resetOnSuccess={false}>
+                  <div className="stack">
+                    {opts.map((o) => (
+                      <label key={o.v} className="check-row" style={{ alignItems: "flex-start", gap: 10, opacity: o.ok ? 1 : 0.6 }}>
+                        <input type="radio" name="source" value={o.v} defaultChecked={src === o.v} disabled={!o.ok && src !== o.v} style={{ marginTop: 4 }} />
+                        <span><b>{o.label}</b><br /><small className="hint">{o.hint}</small></span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="btn-row" style={{ marginTop: 12 }}>
+                    <Submit>Uložit zdroj</Submit>
+                    <Link href="/rozvrh/vlastni" className="btn">{hasOwn ? "Upravit vlastní rozvrh" : "Postavit vlastní rozvrh"}</Link>
+                  </div>
+                </ActionForm>
+                {src === "widget" && <TimetableWidgetPicker />}
+              </div>
+            );
+          })()}
         </section>
 
         <section id="kalendar">
@@ -277,17 +345,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           )}
         </section>
 
-        <section>
-          <h2 className="section" style={{ marginBottom: 12 }}>Rozvrh pro spolužáky</h2>
-          <form action={setTimetableSharing} className="card share-all">
-            <input type="hidden" name="allow" value={getPref(user, "tt_share") === "0" ? "1" : "0"} />
-            <div>
-              <b>Ukazovat můj rozvrh spolužákům</b>
-              <small>Spolužáci z třídy uvidí na tvém profilu rozvrh hodin (tento a příští týden a stálý). Ve výchozím stavu je zapnuto, vypnutím ho spolužáci neuvidí.</small>
-            </div>
-            <button className={`switch${getPref(user, "tt_share") === "0" ? "" : " on"}`} role="switch" aria-checked={getPref(user, "tt_share") !== "0"} aria-label="Ukazovat můj rozvrh spolužákům"><i /></button>
-          </form>
-        </section>
 
         </div>
         )}

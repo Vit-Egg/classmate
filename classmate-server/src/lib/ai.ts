@@ -7,7 +7,7 @@ import { countUsage } from "./db";
 
 export const aiEnabled = () => hasAiKeys();
 
-type Request = { system: string; user: string; temperature?: number; maxTokens?: number; json?: boolean; timeoutMs?: number };
+type Request = { system: string; user: string; temperature?: number; maxTokens?: number; json?: boolean; timeoutMs?: number; /** obrázek nebo PDF (base64) přiložený k dotazu */ file?: { mime: string; data: string } };
 
 async function call(model: string, key: string, r: Request): Promise<string> {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -15,7 +15,7 @@ async function call(model: string, key: string, r: Request): Promise<string> {
     headers: { "content-type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: r.system }] },
-      contents: [{ role: "user", parts: [{ text: r.user }] }],
+      contents: [{ role: "user", parts: [...(r.file ? [{ inlineData: { mimeType: r.file.mime, data: r.file.data } }] : []), { text: r.user }] }],
       generationConfig: { temperature: r.temperature ?? 0.4, maxOutputTokens: r.maxTokens ?? 1500, ...(r.json ? { responseMimeType: "application/json" } : {}) },
     }),
     signal: AbortSignal.timeout(r.timeoutMs ?? 45_000),

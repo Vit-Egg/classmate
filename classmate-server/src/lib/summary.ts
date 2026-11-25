@@ -30,14 +30,6 @@ function buildContext(user: User, d: NonNullable<SubjectDetail>, notes: { title:
   const out: string[] = [`Předmět: ${d.subject.name}`, `Dnes je ${fmtShort(today)}.`];
   if (d.teachers.length) out.push(`Vyučující: ${d.teachers.join(", ")}`);
   if (d.slots.length) out.push(`Hodin týdně: ${d.slots.length}`);
-  if (d.marks.length) {
-    out.push(`\nZnámky (nejnovější první; průměr ${d.average != null ? d.average.toFixed(2) : "neznámý"}):`);
-    for (const m of d.marks.slice(0, 25)) out.push(`- ${fmtShort(m.date)}: ${m.text || "–"}, váha ${m.weight}, ${m.caption}${m.theme ? ` (${m.theme})` : ""}`);
-  }
-  if (d.themesAll.length) {
-    out.push("\nTémata posledních hodin (nejnovější první):");
-    for (const t of d.themesAll) out.push(`- ${fmtShort(t.date)}: ${t.theme}`);
-  }
   const tests = d.tests;
   if (tests.length) {
     out.push("\nNadcházející testy a zkoušení:");
@@ -48,7 +40,6 @@ function buildContext(user: User, d: NonNullable<SubjectDetail>, notes: { title:
     out.push("\nOtevřené úkoly:");
     for (const t of tasks.slice(0, 10)) out.push(`- ${t.title}${t.due_date ? ` (do ${fmtShort(t.due_date)})` : ""}${t.private ? " [jen pro sebe]" : ""}`);
   }
-  if (d.absence) out.push(`\nZameškáno ${d.absence.missed} z ${d.absence.lessons} hodin.`);
   if (notes.length) {
     out.push("\nVlastní poznámky z hodin (nejnovější první):");
     let budget = 9000;

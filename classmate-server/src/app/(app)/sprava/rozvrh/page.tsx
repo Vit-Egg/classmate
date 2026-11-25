@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requirePermission } from "@/lib/session";
 import { permanentTimetable, CYCLE_EVEN, CYCLE_ODD } from "@/lib/sync";
 import { TimetableEditor, type EditorInitial } from "@/components/TimetableEditor";
+import { SchoolDaysAdmin } from "@/components/SchoolDaysAdmin";
+import { aiEnabled } from "@/lib/ai";
 
 export const metadata = { title: "Rozvrh třídy" };
 export const dynamic = "force-dynamic";
@@ -33,7 +35,8 @@ export default async function TimetableAdminPage() {
           <p className="subtitle">Stálý týdenní rozvrh. Podle něj se všem ukazuje Dnes, Rozvrh, Kalendář, Předměty i widgety v telefonu.</p>
         </div>
       </div>
-      <TimetableEditor initial={initial} />
+      <TimetableEditor initial={initial} ai={aiEnabled()} />
+      <SchoolDaysAdmin groups={tt.groups} />
     </div>
   );
 }

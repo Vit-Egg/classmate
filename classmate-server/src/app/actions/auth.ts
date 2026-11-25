@@ -120,7 +120,8 @@ export async function registerAction(_: ActionState, fd: FormData): Promise<Acti
   }
   await createSession(user.id);
   audit({ id: user.id, name: user.name }, "register", { detail: "z pozvánky" });
-  redirect(safeNext(fd.get("next")) ?? "/dnes");
+  const { permanentTimetable } = await import("@/lib/sync");
+  redirect(safeNext(fd.get("next")) ?? (permanentTimetable().groups.length ? "/nastaveni?k=skola#skupiny" : "/dnes"));
 }
 
 export async function logoutAction() {

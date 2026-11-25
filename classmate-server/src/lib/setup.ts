@@ -28,7 +28,7 @@ const Input = z.object({
   name: z.string().trim().min(2, "Napiš své jméno.").max(100, "Jméno je moc dlouhé."),
   email: z.string().trim().toLowerCase().email("Napiš platný e-mail.").max(200),
   password: z.string().max(200, "Heslo je moc dlouhé."),
-  school: z.string().trim().min(2, "Název školy musí mít aspoň 2 znaky.").max(100, "Název školy je moc dlouhý."),
+  school: z.string().trim().max(100, "Název školy je moc dlouhý.").transform((s) => s || "Škola"),
   class: z.string().trim().min(1, "Napiš název své třídy.").max(40, "Název třídy je moc dlouhý."),
 });
 

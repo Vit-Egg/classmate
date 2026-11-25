@@ -12,7 +12,7 @@ export function SetupForm({ fromEnv }: { fromEnv: boolean }) {
     <>
       <h1 style={{ marginBottom: 6 }}>Vítej v Classmate</h1>
       <p className="subtitle" style={{ margin: "0 0 20px", fontSize: 15 }}>
-        Tenhle server je nový. Vytvoř účet správce, školu a svou třídu. Spolužáky pak pozveš ve Správě.
+        Tenhle server je nový. Vytvoř účet správce a svou třídu. Spolužáky pak pozveš ve Správě.
       </p>
       <ActionForm action={setupAction} resetOnSuccess={false}>
         <label className="field">
@@ -38,16 +38,16 @@ export function SetupForm({ fromEnv }: { fromEnv: boolean }) {
           </div>
         </fieldset>
         <fieldset className="fieldset">
-          <legend>Škola</legend>
+          <legend>Třída</legend>
           <div className="form" style={{ marginTop: 10 }}>
             <label className="field">
-              <span>Název školy</span>
-              <input className="input" {...bind("school")} placeholder="Gymnázium Příklad" required />
-            </label>
-            <label className="field">
-              <span>Tvoje třída</span>
+              <span>Název třídy</span>
               <input className="input" {...bind("class")} placeholder="3.A" required />
               <p className="hint">Classmate je pro jednu třídu. Spolužáky pak pozveš ve Správě.</p>
+            </label>
+            <label className="field">
+              <span>Škola (nepovinné)</span>
+              <input className="input" {...bind("school")} placeholder="Gymnázium Příklad" />
             </label>
           </div>
         </fieldset>

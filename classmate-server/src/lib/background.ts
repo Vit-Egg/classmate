@@ -12,6 +12,7 @@ import { purgeStudy } from "./study";
 import { achievementsSweep } from "./achievements";
 import { todoistTick } from "./todoist";
 import { refreshCalendars } from "./personal-calendar";
+import { remindersTick } from "./reminders";
 
 /** Odesílání e-mailových upozornění a push (jednou za minutu). */
 export function startEmailWorker() {
@@ -25,6 +26,7 @@ export function startEmailWorker() {
     try {
       await emailTick();
       await announceTick();
+      if (new Date().getMinutes() % 10 === 0) remindersTick();
       await pushTick();
     } catch (e) {
       console.error("email worker error", e);

@@ -10,7 +10,7 @@ export const PREFS = {
   ai_chat: /^[a-z]{3,12}$/,
   note_mode: /^[er]$/,
   note_rating: /^[01]$/,
-  today_layout: /^([sodtkryzacpuqmbx][lrh],){0,15}[sodtkryzacpuqmbx][lrh]$/,
+  today_layout: /^([sodtkryzacpuqmbxne][lrh],){0,17}[sodtkryzacpuqmbxne][lrh]$/,
   horoscope: /^[a-z]{0,12}$/,
   marks_n: /^[01]$/,
   marks_pct: /^[01]$/,
@@ -19,6 +19,8 @@ export const PREFS = {
   abs_limit: /^([1-9]\d|)$/,
   /** skupiny z rozvrhu, do kterých uživatel patří (kódy oddělené čárkou); prázdné = nevybráno, ukazují se všechny */
   my_groups: /^[A-Za-z0-9_,-]{0,600}$/,
+  /** odkud se bere rozvrh: stálý rozvrh třídy, vlastní rozvrh, osobní kalendář (ICS), nebo widget místo mřížky */
+  tt_source: /^(class|own|cal|widget)$/,
 } as const;
 export type PrefKey = keyof typeof PREFS;
 

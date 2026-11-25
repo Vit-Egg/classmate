@@ -15,7 +15,7 @@ export const KINDS: { id: CalKind; label: string }[] = [
   { id: "test", label: "Testy a zkoušení" },
   { id: "task", label: "Úkoly" },
   { id: "change", label: "Změny v rozvrhu" },
-  { id: "event", label: "Události a svátky" },
+  { id: "event", label: "Prázdniny, volna a svátky" },
   { id: "other", label: "Ostatní" },
 ];
 export const ALL_KINDS = KINDS.map((k) => k.id);

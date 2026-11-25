@@ -72,7 +72,7 @@ export function CommandPalette({ isAdmin, keys, study = false, duty = false, boa
       { id: "new-task", title: "Nový úkol", group: "Akce", icon: "plus", keywords: "domácí úkol zadání", run: go("/ukoly?new=1") },
       { id: "new-test", title: "Nový test nebo zkoušení", group: "Akce", icon: "plus", keywords: "písemka zkoušení test", run: go("/testy-a-zkouseni?new=1") },
       { id: "tt-next", title: "Rozvrh na příští týden", group: "Akce", icon: "calendar", run: go("/rozvrh?t=pristi") },
-      { id: "tt-perm", title: "Stálý rozvrh", group: "Akce", icon: "calendar", run: go("/rozvrh?t=staly") },
+      { id: "tt-perm", title: "Rozvrh: sudý týden", group: "Akce", icon: "calendar", run: go("/rozvrh?t=sudy") },
       { id: "tt-vert", title: "Rozvrh vertikálně", group: "Akce", icon: "calendar", run: () => { document.cookie = "tt_view=v; path=/; max-age=31536000; samesite=lax"; void savePref("tt_view", "v"); router.push("/rozvrh?o=v"); } },
       { id: "tt-horiz", title: "Rozvrh horizontálně", group: "Akce", icon: "calendar", run: () => { document.cookie = "tt_view=h; path=/; max-age=31536000; samesite=lax"; void savePref("tt_view", "h"); router.push("/rozvrh?o=h"); } },
       { id: "achievements", title: "Trofeje", group: "Přejít na", icon: "trophy", keywords: "pochvaly úspěchy odznaky achievementy", run: go("/trofeje") },

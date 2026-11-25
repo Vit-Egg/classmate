@@ -10,13 +10,10 @@ import { subjectDetail } from "@/lib/subjects";
 import { SubjectSummary } from "@/components/SubjectSummary";
 import { getPref } from "@/lib/prefs";
 import { summaryEnabled } from "@/lib/summary";
-import type { Mark } from "@/lib/types";
 
 export const metadata = { title: "Předmět" };
 export const dynamic = "force-dynamic";
 
-const cs = (n: number) => n.toFixed(2).replace(".", ",");
-const gradeClass = (m: Mark) => (m.value == null ? "" : ` g${Math.min(5, Math.max(1, Math.round(m.value + 0.01)))}`);
 
 export default async function SubjectPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -25,7 +22,6 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
   const today = pragueNow().date;
   const startAt = startTimes(user);
   const { subject: s } = d;
-  const absPct = d.absence && d.absence.lessons ? Math.round((d.absence.missed / d.absence.lessons) * 100) : null;
   const nextTest = d.tests[0];
   const mates = subjectMates(user, s.id);
 
@@ -40,10 +36,10 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="stat-row">
-        <div className="stat"><small>Průměr</small><b>{d.average != null ? cs(d.average) : "–"}</b></div>
+        <div className="stat"><small>Hodin týdně</small><b>{d.slots.length || "–"}</b></div>
+        <div className="stat"><small>Příští hodina</small><b>{d.nextLessons[0] ? `${relativeDay(d.nextLessons[0].date, today)}, ${d.nextLessons[0].hour}.` : "–"}</b></div>
         <div className="stat"><small>Další test nebo zkoušení</small><b>{nextTest ? relativeDay(nextTest.date, today) : "žádný"}</b></div>
         <div className="stat"><small>Úkoly</small><b>{d.tasks.length}</b></div>
-        <div className="stat"><small>Absence</small><b>{absPct != null ? `${absPct} %` : "–"}</b></div>
       </div>
 
       {summaryEnabled() && !user.demo && <SubjectSummary subjectId={s.id} consented={getPref(user, "ai_sum") === "1"} />}
@@ -51,7 +47,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
       <div className="grid-2">
         <div className="stack-lg">
           <section>
-            <div className="section-head"><h2 className="section">Rozvrh</h2><Link href="/rozvrh?t=staly" className="link-all">Stálý rozvrh →</Link></div>
+            <div className="section-head"><h2 className="section">Rozvrh</h2><Link href="/rozvrh" className="link-all">Stálý rozvrh →</Link></div>
             {d.slots.length ? (
               <div className="card rows">
                 {d.slots.map((x) => (
@@ -73,33 +69,17 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
           </section>
 
           <section>
-            <div className="section-head"><h2 className="section">Co jsme probírali</h2></div>
-            {d.themes.length ? (
+            <div className="section-head"><h2 className="section">Zápisky z hodin</h2><Link href={`/poznamky?s=${s.id}`} className="link-all">Vše →</Link></div>
+            {d.lessonNotes.length ? (
               <div className="card rows">
-                {d.themes.map((t, i) => (
-                  <div key={i} className="item">
-                    <div className="item-main">
-                      <div className="item-title">{t.theme}</div>
-                      <div className="item-meta"><span>{dayShort(dowOf(t.date))} {fmtShort(t.date)} · {t.hour}. hodina</span></div>
-                    </div>
-                  </div>
+                {d.lessonNotes.map((n) => (
+                  <Link key={n.id} href={`/poznamky/${n.id}`} className="item">
+                    <div className="date-badge"><b>{Number(n.date.slice(8))}</b><span>{dayShort(dowOf(n.date))} · {monthShort(n.date)}</span></div>
+                    <div className="item-main"><div className="item-title">{n.title || "Bez názvu"}</div><div className="item-meta"><span>{n.author ? `zapsal(a) ${n.author}` : "moje"}</span></div></div>
+                  </Link>
                 ))}
               </div>
-            ) : <div className="empty">Z posledních týdnů tu nejsou zapsaná žádná témata hodin.</div>}
-          </section>
-
-          <section>
-            <div className="section-head"><h2 className="section">Známky</h2><Link href="/znamky" className="link-all">Všechny známky →</Link></div>
-            {d.marks.length ? (
-              <div className="card rows">
-                {d.marks.slice(0, 8).map((m) => (
-                  <div key={m.id} className="mark-row">
-                    <div className={`mark${gradeClass(m)}`}>{m.text || "–"}</div>
-                    <div><div className="t">{m.caption}</div><div className="m"><span>{fmtShort(m.date)}</span><span>váha {m.weight}</span></div></div>
-                  </div>
-                ))}
-              </div>
-            ) : <div className="empty">Zatím žádné známky.</div>}
+            ) : <div className="empty">Zatím tu nejsou žádné zápisky. <Link href={`/poznamky?s=${s.id}`} className="link-u">Napiš první</Link> a nasdílej ho třídě.</div>}
           </section>
         </div>
 
@@ -153,28 +133,6 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
             ) : <div className="empty">Žádné otevřené úkoly.</div>}
           </section>
 
-          <section>
-            <div className="section-head"><h2 className="section">Poznámky</h2><Link href={`/poznamky?s=${s.id}`} className="link-all">Vše →</Link></div>
-            {d.ownNotes.length || d.sharedNotes.length ? (
-              <div className="card rows">
-                {d.ownNotes.map((n) => (
-                  <Link key={n.id} href={`/poznamky/${n.id}`} className="item"><div className="item-main"><div className="item-title">{n.title || "Bez názvu"}</div></div></Link>
-                ))}
-                {d.sharedNotes.map((n) => (
-                  <Link key={`s${n.id}`} href={`/poznamky/${n.id}`} className="item"><div className="item-main"><div className="item-title">{n.title || "Bez názvu"}</div><div className="item-meta"><span>sdílí {n.author}</span></div></div></Link>
-                ))}
-              </div>
-            ) : <div className="empty">K předmětu zatím nemáš žádné poznámky.</div>}
-          </section>
-
-          {d.absence && (
-            <section>
-              <div className="section-head"><h2 className="section">Absence</h2><Link href="/absence" className="link-all">Vše →</Link></div>
-              <div className="card card-pad">
-                <p style={{ margin: 0 }}>Zameškáno <b>{d.absence.missed}</b> z {d.absence.lessons} hodin{absPct != null && <> ({absPct} %)</>}{d.absence.late ? `, pozdě ${d.absence.late}×` : ""}.</p>
-              </div>
-            </section>
-          )}
         </div>
       </div>
     </div>

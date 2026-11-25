@@ -18,7 +18,8 @@ import { monthShort, addDays, dayName, dayShort, diffDays, dowOf, mondayOf, fmtD
 import { nextSchoolDay } from "@/lib/nextday";
 import { isSelfStudy } from "@/lib/selfstudy";
 import { requireUser } from "@/lib/session";
-import { getTimetable } from "@/lib/sync";
+import { chosenGroups, getTimetable, permanentTimetable, timetableSource } from "@/lib/sync";
+import { TimetableWidgetSwap } from "@/components/TimetableWidget";
 import { createNote } from "@/app/actions/notes";
 import { openMessage } from "@/app/actions/messages";
 import { all } from "@/lib/db";
@@ -30,6 +31,8 @@ import { classmates } from "@/lib/classmates";
 import { lessonItemsBetween, itemsForLesson } from "@/lib/lessonitems-data";
 import { LessonTags } from "@/components/LessonTags";
 import { PersonalWidgets } from "@/components/PersonalWidgets";
+import { boardEnabled, listPosts } from "@/lib/board";
+import { listSchoolDays, publicHoliday, SCHOOL_DAY_KINDS } from "@/lib/school-days";
 
 export const metadata = { title: "Dnes" };
 export const dynamic = "force-dynamic";
@@ -42,6 +45,8 @@ export default async function TodayPage() {
   const dayNames = await nameDayNames(now.date);
   const mates = dayNames.length ? classmates(user.class_id) : [];
   const result = await getTimetable(user, "this");
+  // třída se dělí na skupiny a člověk si je ještě nevybral: rozvrh by ukazoval hodiny všech skupin přes sebe
+  const needGroups = permanentTimetable().groups.length > 0 && !chosenGroups(user);
   const hues = subjectHues(user.class_id);
   const hours = new Map((result.data?.hours ?? []).map((h) => [h.hour, h]));
   const lessons = (result.data?.lessons ?? []).filter((l) => l.day === now.dow).sort((a, b) => a.hour - b.hour);
@@ -321,6 +326,43 @@ export default async function TodayPage() {
   }
 
 
+  let boardEl: React.ReactNode = null;
+  if (on("n") && boardEnabled(user.class_id)) {
+    const post = listPosts(user).find((p) => !p.expired);
+    boardEl = box("Nástěnka třídy", "/nastenka", "Vše →", post ? (
+      <Link href="/nastenka" className="card card-pad" style={{ display: "block" }}>
+        <div className="item-title">{post.pinned ? "📌 " : ""}{post.title}</div>
+        {post.body && <p className="hint" style={{ margin: "6px 0 0", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{post.body.slice(0, 400)}</p>}
+        <div className="item-meta" style={{ marginTop: 8 }}><span>{post.author} · {fmtDateTime(post.createdAt)}</span>{post.poll && <span className="chip plain">Anketa</span>}</div>
+      </Link>
+    ) : <div className="empty">Na nástěnce zatím nic není.</div>);
+  }
+
+  let daysOffEl: React.ReactNode = null;
+  if (on("e")) {
+    const kind = (k: string) => SCHOOL_DAY_KINDS.find((x) => x.id === k)?.label.split(" (")[0] ?? k;
+    const items: { date: string; to: string; title: string; sub: string }[] = listSchoolDays(now.date).slice(0, 4).map((d) => ({ date: d.date_from < now.date ? now.date : d.date_from, to: d.date_to, title: d.title || kind(d.kind), sub: kind(d.kind) }));
+    for (let i = 0; i <= 60; i++) {
+      const d = addDays(now.date, i);
+      const h = dowOf(d) <= 5 ? publicHoliday(d) : null;
+      if (h) { items.push({ date: d, to: d, title: h, sub: "Státní svátek" }); break; }
+    }
+    items.sort((a, b) => a.date.localeCompare(b.date));
+    daysOffEl = box("Nejbližší volno a změny", "/kalendar", "Kalendář →", items.length ? (
+      <div className="card rows">
+        {items.slice(0, 4).map((e, i) => (
+          <div key={i} className="item">
+            <div className="date-badge"><b>{Number(e.date.slice(8))}</b><span>{dayShort(dowOf(e.date))} · {monthShort(e.date)}</span></div>
+            <div className="item-main">
+              <div className="item-title">{e.title}</div>
+              <div className="item-meta"><span>{[relativeDay(e.date, now.date), e.to !== e.date ? `do ${fmtShort(e.to)}` : "", e.sub].filter(Boolean).join(" · ")}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : <div className="empty">V nejbližší době žádné volno.</div>);
+  }
+
   let cashEl: React.ReactNode = null;
   if (on("m") && user.cash_enabled) {
     const list = myPayments(user).filter((p) => p.status === "unpaid").slice(0, 4);
@@ -366,7 +408,7 @@ export default async function TodayPage() {
     </div>
   )) : null;
 
-  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: afterSchool && tomorrowEl ? tomorrowEl : scheduleEl, d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, c: calEl, p: notesEl, u: messagesEl, m: cashEl, b: quickEl };
+  const widgets: Record<string, React.ReactNode> = { x: horoscopeEl, s: timetableSource(user) === "widget" ? <section><div className="section-head"><h2 className="section">Rozvrh</h2><Link href="/rozvrh" className="link-all">Vše →</Link></div><TimetableWidgetSwap height={360}>{afterSchool && tomorrowEl ? tomorrowEl : scheduleEl}</TimetableWidgetSwap></section> : afterSchool && tomorrowEl ? tomorrowEl : scheduleEl, d: user.duty_enabled ? <DutyWidget user={user} /> : null, t: testsEl, k: tasksEl, y: afterSchool ? null : tomorrowEl, c: calEl, p: notesEl, u: messagesEl, m: cashEl, b: quickEl, n: boardEl, e: daysOffEl };
   const available = ["r", "s", ...(user.duty_enabled ? ["d"] : []), "t", "k", "y", "c", "p", "u", ...(user.cash_enabled ? ["m"] : []), "b", "x"];
   const col = (c: "l" | "r") => layout.filter((x) => x.col === c && widgets[x.id]).map((x) => <Fragment key={x.id}>{widgets[x.id]}</Fragment>);
   const showRuler = layout.find((x) => x.id === "r")?.col !== "h";
@@ -399,6 +441,12 @@ export default async function TodayPage() {
       </h1>
       {showRuler && <DayLine slots={slots} />}
       {showRuler && <DayRuler slots={slots} />}
+      {needGroups && (
+        <div className="card card-pad" role="note" style={{ margin: "0 0 18px", borderColor: "var(--accent)" }}>
+          <b>Vyber si své skupiny.</b> Třída se na některé předměty dělí, a dokud skupiny nevybereš, vidíš v rozvrhu hodiny všech skupin.{" "}
+          <Link href="/nastaveni?k=skola#skupiny" className="link-u">Vybrat skupiny</Link>
+        </div>
+      )}
       <div className="today-tools"><TodayCustomize initial={layout} available={available} /></div>
       <div className="grid-2" style={hasLeft && hasRight ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}>
         {hasLeft && <div className="stack-lg">

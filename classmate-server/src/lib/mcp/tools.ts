@@ -337,7 +337,7 @@ export const tools: Tool[] = [
   {
     name: "get_subject",
     title: "Přehled předmětu",
-    description: "Všechno k jednomu předmětu: učitelé, hodiny v rozvrhu, nejbližší hodiny, témata hodin, testy a zkoušení, úkoly, známky a průměr, absence a poznámky. ID předmětu je z list_subjects.",
+    description: "Všechno k jednomu předmětu: učitelé, hodiny v rozvrhu, nejbližší hodiny, testy a zkoušení, úkoly a zápisky z hodin (moje i sdílené poznámky). ID předmětu je z list_subjects.",
     schema: z.object({ subject_id: id("předmětu (z list_subjects)") }),
     annotations: read,
     async run(user, a) {
@@ -347,11 +347,9 @@ export const tools: Tool[] = [
       return {
         subject: d.subject.name, teachers: d.teachers, rooms: d.rooms, lessonsPerWeek: d.slots.length,
         timetable: d.slots.map((s) => ({ day: dayName(s.day), hour: s.hour, time: s.begin && s.end ? `${s.begin}–${s.end}` : undefined, room: s.room || undefined })),
-        nextLessons: d.nextLessons, recentThemes: d.themes,
+        nextLessons: d.nextLessons,
         tests: d.tests.map(testView(today)), openTasks: d.tasks.map(taskView(today)),
-        marks: d.marks.map((m) => ({ date: m.date, mark: m.text, weight: m.weight, caption: m.caption })), average: d.average ?? undefined,
-        absence: d.absence ? { missed: d.absence.missed, lessons: d.absence.lessons } : undefined,
-        notes: [...d.ownNotes.map((n) => ({ id: n.id, title: n.title })), ...d.sharedNotes.map((n) => ({ id: n.id, title: n.title, sharedBy: n.author }))],
+        notes: d.lessonNotes.map((n) => ({ id: n.id, title: n.title, date: n.date, sharedBy: n.author || undefined })),
       };
     },
   },

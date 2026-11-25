@@ -7,8 +7,10 @@ import { all, get, run, tx } from "./db";
 import { addDays, mondayOf, pragueNow } from "./dates";
 import type { CacheResult, Hue, Timetable } from "./types";
 import type { User } from "./session";
-import { withPersonalChanges } from "./personal-calendar";
+import { calendarWeek, withPersonalChanges } from "./personal-calendar";
+import { ownTimetable } from "./own-timetable";
 import { getPref } from "./prefs";
+import { applySchoolDays } from "./school-days";
 
 const HUES: Hue[] = ["gray", "purple", "green", "amber", "blue"];
 const hueFor = (name: string) => HUES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
@@ -77,23 +79,45 @@ export function isoWeek(monday: string) {
 }
 
 /** Stálý rozvrh rozložený do konkrétního týdne: doplní data k dnům a vynechá hodiny jen pro sudý/lichý týden, které tento týden nejsou. */
-export function permanentWeek(monday: string): Timetable {
-  const tt = permanentTimetable();
+export function permanentWeek(monday: string, tt: Timetable = permanentTimetable()): Timetable {
   const parity = isoWeek(monday) % 2 === 0 ? CYCLE_EVEN : CYCLE_ODD;
-  return {
+  // svátky, prázdniny, volna a ruční změny pro třídu (school-days.ts)
+  return applySchoolDays({
     ...tt,
     days: tt.days.map((d) => ({ ...d, date: addDays(monday, d.day - 1) })),
     lessons: tt.lessons.filter((l) => !l.cycles.length || l.cycles.includes(parity)).map((l) => ({ ...l, cycles: [] })),
-  };
+  });
 }
 
 const result = (data: Timetable): CacheResult<Timetable> => ({ data, stale: false, fetchedAt: Date.now() });
 
-/** Týden se změnami z osobního kalendáře uživatele (viz personal-calendar.ts); ty vidí jen on. */
-const personalWeek = (user: User, monday: string) => withPersonalChanges(user.id, forUser(user, permanentWeek(monday)));
+/** Odkud se uživateli bere rozvrh (Nastavení → Škola a předměty → Zdroj rozvrhu). Widget místo rozvrhu je na serveru jako rozvrh třídy. */
+export type TimetableSource = "class" | "own" | "cal" | "widget";
+export const timetableSource = (user: Pick<User, "ui_prefs">): TimetableSource => (getPref(user, "tt_source") as TimetableSource | undefined) ?? "class";
+
+/** Stálý rozvrh, ze kterého se uživateli skládají týdny: vlastní (když ho má zvolený), jinak rozvrh třídy podle jeho skupin. */
+function basePermanent(user: User): Timetable {
+  if (timetableSource(user) === "own") {
+    const own = ownTimetable(user.id);
+    if (own) return own;
+  }
+  return forUser(user, permanentTimetable());
+}
+
+/**
+ * Týden uživatele. Rozvrh třídy (nebo vlastní) + svátky a volna + změny z osobního kalendáře; ty vidí jen on.
+ * Se zdrojem „Můj kalendář“ se hodiny poskládají přímo z událostí kalendáře (zvonění a předměty jsou z rozvrhu třídy).
+ */
+function personalWeek(user: User, monday: string): Timetable {
+  if (timetableSource(user) === "cal") {
+    const fromCal = calendarWeek(user.id, permanentWeek(monday, forUser(user, permanentTimetable())));
+    if (fromCal) return applySchoolDays(fromCal);
+  }
+  return withPersonalChanges(user.id, permanentWeek(monday, basePermanent(user)));
+}
 
 export async function getTimetable(user: User, kind: TimetableKind, _force = false) {
-  return kind === "permanent" ? result(forUser(user, permanentTimetable())) : result(personalWeek(user, weekMonday(kind)));
+  return kind === "permanent" ? result(basePermanent(user)) : result(personalWeek(user, weekMonday(kind)));
 }
 
 /** Rozvrh týdne začínajícího daným pondělím (pro kalendář i „tento/příští týden“). */
@@ -103,7 +127,7 @@ export async function getTimetableWeek(user: User, monday: string, _force = fals
 
 /** Okamžitě, bez čekání – pro prvky, které nesmí zdržovat vykreslení stránky. */
 export function peekTimetable(user: User, kind: TimetableKind): Timetable | null {
-  return kind === "permanent" ? forUser(user, permanentTimetable()) : personalWeek(user, weekMonday(kind));
+  return kind === "permanent" ? basePermanent(user) : personalWeek(user, weekMonday(kind));
 }
 
 /** Předměty a skupiny uživatele podle stálého rozvrhu. */

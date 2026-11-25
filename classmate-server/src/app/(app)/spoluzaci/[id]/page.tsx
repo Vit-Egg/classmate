@@ -8,10 +8,6 @@ import { SocialIcon, socialColor } from "@/components/SocialIcon";
 import { SOCIALS, showSocial, socialHref } from "@/lib/socials";
 import { celebrates, nameDayNames } from "@/lib/namedays";
 import { requireUser } from "@/lib/session";
-import { TimetableView } from "@/components/Timetable";
-import { subjectHues } from "@/lib/content";
-import { addDays } from "@/lib/dates";
-import { weekMonday } from "@/lib/sync";
 import { voteSummary } from "@/lib/note-votes";
 
 export const dynamic = "force-dynamic";
@@ -22,23 +18,15 @@ export async function generateMetadata() {
 
 const when = (iso: string | null) => (iso ? `${dayShort(dowOf(iso))} ${fmtShort(iso)}` : "bez termínu");
 
-export default async function ClassmatePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ r?: string }> }) {
+export default async function ClassmatePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
-  const sp = await searchParams;
   const p = Number.isInteger(Number(id)) ? classmateProfile(user, Number(id)) : null;
   if (!p) notFound();
   const m = p.mate;
   const first = m.name.split(/\s+/)[0];
   const nameday = celebrates(m.name, await nameDayNames(pragueNow().date));
   const own = p.groups.filter((g) => !g.wholeClass);
-  const tabs = [
-    { key: "tyden", label: "Tento týden", tt: p.timetables.this, monday: weekMonday("this"), permanent: false },
-    { key: "pristi", label: "Příští týden", tt: p.timetables.next, monday: weekMonday("next"), permanent: false },
-    { key: "staly", label: "Stálý rozvrh", tt: p.timetables.permanent, monday: undefined as string | undefined, permanent: true },
-  ];
-  const withData = tabs.filter((t) => t.tt);
-  const tab = tabs.find((t) => t.key === sp.r && t.tt) ?? withData[0];
   const today = pragueNow();
   const votes = voteSummary(p.sharedNotes.map((n) => n.id));
   const nothing = !p.sharedNotes.length && !p.collabNotes.length && !p.tasks.length && !p.tests.length && !p.events.length;
@@ -182,25 +170,6 @@ export default async function ClassmatePage({ params, searchParams }: { params: 
           </div>
         )}
       </section>
-      <details className="mate-tt" style={{ marginTop: 28 }}>
-        <summary>Rozvrh hodin{tab || p.timetableHidden ? "" : " (zatím není načtený)"}</summary>
-        {!tab ? (
-          <div className="empty">{p.timetableHidden ? `${first} svůj rozvrh nesdílí.` : `${first} zatím nemá v aplikaci načtený rozvrh.`}</div>
-        ) : (
-          <>
-            <div className="toolbar" style={{ margin: "12px 0 10px" }}>
-              <nav className="seg" aria-label="Období rozvrhu">
-                {withData.map((t) => (
-                  <Link key={t.key} href={`/spoluzaci/${m.id}?r=${t.key}`} scroll={false} aria-current={t.key === tab.key}>{t.label}</Link>
-                ))}
-              </nav>
-              {tab.monday && <span className="hint">{fmtShort(tab.monday)} – {fmtShort(addDays(tab.monday, 4))}</span>}
-            </div>
-            <TimetableView tt={tab.tt!} monday={tab.monday} today={today.date} todayDow={today.dow} vertical={false} hues={subjectHues(user.class_id)} permanent={tab.permanent} />
-            <p className="hint" style={{ margin: "8px 4px 0" }}>Rozvrh je z poslední synchronizace {p.self ? "tvého účtu" : "účtu spolužáka"}, takže nemusí obsahovat úplně čerstvé změny.</p>
-          </>
-        )}
-      </details>
 
       <p className="hint" style={{ margin: "22px 4px 0" }}>Vidíš jen to, co {p.self ? "sdílíš" : first + " sdílí"} se třídou nebo se skupinou, ve které jste spolu. Soukromé úkoly, testy a zkoušení a události, e-mail ani známky se tu neukazují.</p>
     </div>

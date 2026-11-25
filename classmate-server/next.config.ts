@@ -52,7 +52,9 @@ const config: NextConfig = {
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "same-origin" },
-      { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+      // same-origin-allow-popups: okno s přihlášením, které otevře plugin v rámu (např. Classmate lite), si zachová vazbu na rám
+      // a může mu předat přihlášení. Při „same-origin“ prohlížeč okno odstřihne a přihlášení pluginu se nedokončí.
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
       { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
     ];
